@@ -38,7 +38,7 @@ def to_out(db: Session, request: ApprovalRequest, viewer: User) -> ApprovalOut:
         reviewed_by=_name(db, request.reviewed_by_user_id),
         reviewed_at=request.reviewed_at,
         review_comment=request.review_comment,
-        can_review=approvals.can_review(viewer, request),
+        can_review=approvals.can_review(db, viewer, request),
         can_cancel=request.status == ApprovalStatus.pending and request.initiated_by_user_id == viewer.id,
     )
 
@@ -49,14 +49,14 @@ def list_approvals(
     db: Session = Depends(get_db),
     user: User = Depends(require_staff),
 ) -> list[ApprovalOut]:
-    rows = db.execute(approvals.visible_query(user, status_filter).limit(500)).scalars()
+    rows = db.execute(approvals.visible_query(db, user, status_filter).limit(500)).scalars()
     return [to_out(db, r, user) for r in rows]
 
 
 @router.get("/{request_id}", response_model=ApprovalOut)
 def get_approval(request_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(require_staff)) -> ApprovalOut:
     request = db.get(ApprovalRequest, request_id)
-    if request is None or not approvals.can_view(user, request):
+    if request is None or not approvals.can_view(db, user, request):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Request not found")
     return to_out(db, request, user)
 

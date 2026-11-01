@@ -23,6 +23,7 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlined";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutlined";
 import SavingsOutlinedIcon from "@mui/icons-material/SavingsOutlined";
 import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
+import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlined";
 import { useAuth } from "../auth/AuthContext";
 import { RouteErrorBoundary } from "../components/RouteErrorBoundary";
 import { NotificationBell } from "../components/notifications/NotificationBell";
@@ -32,6 +33,7 @@ import { NotificationsPage } from "./notifications/NotificationsPage";
 import { StaffHome } from "./staff/StaffHome";
 import { ApprovalsPage } from "./staff/approvals/ApprovalsPage";
 import { UsersPage } from "./staff/admin/UsersPage";
+import { FundsPage } from "./staff/funds/FundsPage";
 import { MemberHome } from "./member/MemberHome";
 import { PoHome } from "./po/PoHome";
 import { ROLE_LABELS, STAFF_ROLES } from "../api/types";
@@ -63,6 +65,7 @@ const SECTIONS: Section[] = [
   { path: "po", label: "My schemes", icon: <BusinessOutlinedIcon />, roles: ["principal_officer"], element: <PoHome /> },
   { path: "home", label: "Home", icon: <HomeOutlinedIcon />, roles: STAFF_ROLES, element: <StaffHome /> },
   { path: "approvals", label: "Approvals", icon: <CheckCircleOutlineIcon />, roles: STAFF_ROLES, element: <ApprovalsPage /> },
+  { path: "funds", label: "Funds", icon: <AccountBalanceOutlinedIcon />, roles: STAFF_ROLES, element: <FundsPage /> },
   { path: "users", label: "Users", icon: <PersonOutlineIcon />, roles: ["admin", "auditor"], element: <UsersPage /> },
 ];
 

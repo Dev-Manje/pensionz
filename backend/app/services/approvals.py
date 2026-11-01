@@ -5,6 +5,8 @@ approval does) and then calls `submit(...)` instead of changing data directly.
 A checker approves or rejects through the generic /approvals endpoints:
 
 - the checker must hold one of the kind's checker roles, and must not be the maker;
+- a request about a fund is only visible to, and decidable by, staff who
+  administer that fund (FR-SEC-001);
 - only a pending request can be decided (409 otherwise) — the row is locked,
   so two checkers can't both approve;
 - approval runs the kind's `apply` in the same commit as the status change,
@@ -15,13 +17,13 @@ from dataclasses import dataclass, field
 from typing import Callable
 
 from fastapi import HTTPException, status
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select, true
 from sqlalchemy.orm import Session
 
 from app.models.approval import ApprovalRequest, ApprovalStatus
 from app.models.identity import User, UserRole
 from app.models.mixins import utcnow
-from app.services import audit, notifications
+from app.services import audit, fund_access, notifications
 
 # Roles that may see every request (read-only for auditors).
 OVERSIGHT_ROLES = frozenset({UserRole.admin, UserRole.auditor})
@@ -95,35 +97,48 @@ def submit(
     db.flush()
     audit.record(db, maker.id, "approval_request", request.id, "submitted", after={"kind": kind, "summary": summary}, fund_id=fund_id)
     checkers = notifications.users_with_roles(db, set(spec.checker_roles), exclude={maker.id})
+    if fund_id is not None:
+        checkers = [c for c in checkers if fund_access.can_access(db, c, fund_id)]
     notifications.notify_approval_needed(db, checkers, summary, request.id)
     return request
 
 
-def can_review(user: User, request: ApprovalRequest) -> bool:
+def _in_scope(db: Session, user: User, request: ApprovalRequest) -> bool:
+    return request.fund_id is None or fund_access.can_access(db, user, request.fund_id)
+
+
+def can_review(db: Session, user: User, request: ApprovalRequest) -> bool:
     spec = _KINDS.get(request.kind)
     return (
         spec is not None
+        and _in_scope(db, user, request)
         and request.status == ApprovalStatus.pending
         and request.initiated_by_user_id != user.id
         and user.has_any_role(*spec.checker_roles)
     )
 
 
-def can_view(user: User, request: ApprovalRequest) -> bool:
+def can_view(db: Session, user: User, request: ApprovalRequest) -> bool:
     spec = _KINDS.get(request.kind)
     return (
         request.initiated_by_user_id == user.id
         or user.has_any_role(*OVERSIGHT_ROLES)
-        or (spec is not None and user.has_any_role(*spec.checker_roles))
+        or (spec is not None and user.has_any_role(*spec.checker_roles) and _in_scope(db, user, request))
     )
 
 
-def visible_query(user: User, status_filter: ApprovalStatus | None):
-    """Requests the user made, plus those for kinds they check (all for oversight roles)."""
+def visible_query(db: Session, user: User, status_filter: ApprovalStatus | None):
+    """Requests the user made, plus those for kinds they check within their
+    funds (all for oversight roles)."""
     query = select(ApprovalRequest)
     if not user.has_any_role(*OVERSIGHT_ROLES):
         checkable = [k.name for k in _KINDS.values() if user.has_any_role(*k.checker_roles)]
-        query = query.where(or_(ApprovalRequest.initiated_by_user_id == user.id, ApprovalRequest.kind.in_(checkable)))
+        funds = fund_access.fund_ids_for(db, user)
+        in_scope = true() if funds is None else or_(ApprovalRequest.fund_id.is_(None), ApprovalRequest.fund_id.in_(funds))
+        query = query.where(or_(
+            ApprovalRequest.initiated_by_user_id == user.id,
+            and_(ApprovalRequest.kind.in_(checkable), in_scope),
+        ))
     if status_filter is not None:
         query = query.where(ApprovalRequest.status == status_filter)
     return query.order_by(ApprovalRequest.created_at.desc())
@@ -138,8 +153,10 @@ def _load_for_decision(db: Session, request_id: uuid.UUID) -> ApprovalRequest:
     return request
 
 
-def _check_checker(user: User, request: ApprovalRequest) -> ApprovalKind:
+def _check_checker(db: Session, user: User, request: ApprovalRequest) -> ApprovalKind:
     spec = get_kind(request.kind)
+    if not _in_scope(db, user, request):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Request not found")
     if request.initiated_by_user_id == user.id:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "You can't approve or reject your own request — another person must check it")
     if not user.has_any_role(*spec.checker_roles):
@@ -161,7 +178,7 @@ def _finish(db: Session, request: ApprovalRequest, user: User, new_status: Appro
 
 def approve(db: Session, request_id: uuid.UUID, user: User, comment: str | None = None) -> ApprovalRequest:
     request = _load_for_decision(db, request_id)
-    spec = _check_checker(user, request)
+    spec = _check_checker(db, user, request)
     spec.apply(db, request, user)
     _finish(db, request, user, ApprovalStatus.approved, comment)
     db.commit()
@@ -173,7 +190,7 @@ def reject(db: Session, request_id: uuid.UUID, user: User, comment: str) -> Appr
     if not comment or not comment.strip():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Give a reason so the person who asked knows what to fix")
     request = _load_for_decision(db, request_id)
-    spec = _check_checker(user, request)
+    spec = _check_checker(db, user, request)
     if spec.on_reject:
         spec.on_reject(db, request, user)
     _finish(db, request, user, ApprovalStatus.rejected, comment.strip())

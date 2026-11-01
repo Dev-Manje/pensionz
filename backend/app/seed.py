@@ -4,10 +4,16 @@ can be approved). Safe to run repeatedly — existing users are left alone.
     docker compose exec backend python -m app.seed
 
 Logins are listed in TEST_USERS.md."""
+from datetime import date
+
+from sqlalchemy import select
+
 from app.core.database import SessionLocal
-from app.models.identity import UserRole
+from app.models.fund import BankAccountPurpose, Fund, FundBankAccount, FundTrustee, FundType
+from app.models.identity import STAFF_ROLES, UserRole
 from app.models.mixins import utcnow
-from app.services import identity
+from app.models.reference import Bank
+from app.services import fund_access, identity
 
 DEV_PASSWORD = "Pensionz2026"
 
@@ -49,11 +55,63 @@ def seed_users(db) -> int:
     return created
 
 
+# Invented funds — no real organisation's name. (code, name, type, bank, account no., trustees)
+FUNDS = [
+    ("UMB01", "Chitukuko Umbrella Pension Fund", FundType.umbrella_dc, "National Bank of Malawi", "1001234567",
+     [("Mercy Banda", "Chairperson"), ("Peter Phiri", "Employer-appointed trustee"), ("Alinafe Chirwa", "Member-elected trustee")]),
+    ("LSS01", "Lakeshore Sugar Staff Pension Fund", FundType.standalone_dc, "Standard Bank Malawi", "0140987654",
+     [("John Mwale", "Chairperson"), ("Chisomo Kachingwe", "Member-elected trustee")]),
+    ("MTDB1", "Mulunguzi Teachers Defined Benefit Scheme", FundType.defined_benefit, "FDH Bank", "2200456789",
+     [("Grace Nkhoma", "Chairperson"), ("Yamikani Gondwe", "Trustee")]),
+    ("PPF01", "Tsogolo Personal Pension Fund", FundType.personal_pension, "NBS Bank", "3300112233",
+     [("Hannah Kumwenda", "Chairperson")]),
+]
+
+
+def seed_funds(db) -> int:
+    created = 0
+    for code, name, fund_type, bank_name, account_no, trustees in FUNDS:
+        if db.execute(select(Fund).where(Fund.code == code)).scalar_one_or_none() is not None:
+            continue
+        bank = db.execute(select(Bank).where(Bank.name == bank_name)).scalar_one()
+        branch = next((b for b in bank.branches if b.name == "Blantyre"), None)
+        fund = Fund(
+            code=code, name=name, fund_type=fund_type, registration_number=f"RBM/PF/{100 + created}",
+            tpin=f"7000{created + 1}234", financial_year_end_month=12,
+            address_line1="Private Bag 1", address_line2="Victoria Avenue", address_line3="Blantyre",
+            phone="+265 1 820 000", email=f"{code.lower()}@funds.example",
+            contact_name=trustees[0][0], contact_email=f"secretary.{code.lower()}@funds.example", contact_phone="+265 999 000 000",
+        )
+        db.add(fund)
+        db.flush()
+        for order, (trustee, designation) in enumerate(trustees):
+            db.add(FundTrustee(fund_id=fund.id, full_name=trustee, designation=designation, appointed_on=date(2024, 1, 1), sort_order=order))
+        db.add(FundBankAccount(fund_id=fund.id, bank_id=bank.id, branch_id=branch.id if branch else None,
+                               account_name=f"{name} — Collections", account_number=account_no,
+                               purpose=BankAccountPurpose.collections))
+        created += 1
+    db.flush()
+    return created
+
+
+def grant_seed_access(db) -> None:
+    """Seeded fund-level staff administer every seeded fund (admins/auditors see all anyway)."""
+    fund_ids = [f.id for f in db.execute(select(Fund).where(Fund.code.in_([c for c, *_ in FUNDS]))).scalars()]
+    for email, _, roles in USERS:
+        if not any(r in STAFF_ROLES for r in roles) or UserRole.admin in roles or UserRole.auditor in roles:
+            continue
+        user = identity.find_by_email(db, email)
+        for fund_id in fund_ids:
+            fund_access.grant(db, user.id, fund_id, None)
+
+
 def main() -> None:
     with SessionLocal() as db:
         created = seed_users(db)
+        funds = seed_funds(db)
+        grant_seed_access(db)
         db.commit()
-    print(f"Seed complete: {created} user(s) created (password for all: {DEV_PASSWORD}).")
+    print(f"Seed complete: {created} user(s), {funds} fund(s) created (password for all: {DEV_PASSWORD}).")
 
 
 if __name__ == "__main__":

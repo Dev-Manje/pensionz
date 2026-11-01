@@ -25,8 +25,9 @@ import { DiffView } from "../../../components/DiffView";
 import { useFeedback } from "../../../components/feedback/FeedbackProvider";
 import { useUrlTab } from "../../../hooks/useUrlState";
 import { useApproval, useApprovals, useDecideApproval } from "../../../queries/approvals";
-import { formatDateTime } from "../../../utils/date";
-import { ROLE_LABELS, type Approval, type UserRole } from "../../../api/types";
+import { formatDate, formatDateTime, MONTH_NAMES } from "../../../utils/date";
+import { statusLabel } from "../../../utils/labels";
+import { BANK_PURPOSE_LABELS, FUND_TYPE_LABELS, ROLE_LABELS, type Approval, type BankAccountPurpose, type FundType, type UserRole } from "../../../api/types";
 
 const VIEWS = ["review", "mine", "history"] as const;
 type View = (typeof VIEWS)[number];
@@ -37,11 +38,29 @@ const EMPTY: Record<View, string> = {
   history: "No decided requests yet.",
 };
 
-// Readable values for known payload fields (roles, status) in the diff.
+type Row = Record<string, unknown>;
+
+// One line per trustee / bank account in a fund change.
+function describeRow(key: string, row: Row): string {
+  const parts =
+    key === "bank_accounts"
+      ? [row.bank_name, row.branch_name, row.account_number, row.account_name, BANK_PURPOSE_LABELS[row.purpose as BankAccountPurpose], row.currency]
+      : [row.full_name, row.designation, row.email, row.phone, row.appointed_on ? `appointed ${formatDate(row.appointed_on as string)}` : null];
+  return parts.filter(Boolean).join(" · ");
+}
+
+// Readable values for known payload fields (roles, status, fund type…) in the diff.
 function formatValue(key: string, value: unknown): string {
   if (value === null || value === undefined || value === "") return "—";
   if (key === "roles" && Array.isArray(value)) return value.map((r) => ROLE_LABELS[r as UserRole] ?? r).join(", ");
-  if (Array.isArray(value)) return value.join(", ");
+  if (key === "fund_type") return FUND_TYPE_LABELS[value as FundType] ?? String(value);
+  if (key === "financial_year_end_month") return MONTH_NAMES[Number(value) - 1] ?? String(value);
+  if (key === "status") return statusLabel(String(value));
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "—";
+    if (typeof value[0] === "object") return value.map((row) => describeRow(key, row as Row)).join("\n");
+    return value.join(", ");
+  }
   return String(value);
 }
 
@@ -67,7 +86,7 @@ function ApprovalDialog({ approval, onClose }: { approval: Approval; onClose: ()
   }
 
   return (
-    <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>{approval.kind_label}</DialogTitle>
       <DialogContent>
         <Stack spacing={2}>

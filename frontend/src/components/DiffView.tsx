@@ -20,8 +20,12 @@ function humanKey(key: string) {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+
 // Before → after for a change request, so the checker sees exactly what
-// approving will change. With no `before`, it lists the proposed values.
+// approving will change: with `before`, only fields that differ are listed
+// (a full-record snapshot, e.g. a fund, shows just its edits). With no
+// `before`, it lists the proposed values that were filled in.
 export function DiffView({
   after,
   before,
@@ -33,7 +37,10 @@ export function DiffView({
   hide?: string[];
   format?: (key: string, value: unknown) => string;
 }) {
-  const keys = Object.keys(after).filter((k) => !hide.includes(k));
+  const blank = (v: unknown) => v === null || v === undefined || v === "" || (Array.isArray(v) && v.length === 0);
+  const keys = Object.keys(after).filter(
+    (k) => !hide.includes(k) && (before ? !(k in before && same(before[k], after[k])) : !blank(after[k])),
+  );
   if (keys.length === 0) return <Typography color="text.secondary">No details.</Typography>;
   return (
     <Table size="small" aria-label="Proposed change">
@@ -48,8 +55,8 @@ export function DiffView({
         {keys.map((k) => (
           <TableRow key={k}>
             <TableCell sx={{ fontWeight: 500 }}>{humanKey(k)}</TableCell>
-            {before && <TableCell sx={{ color: "text.secondary" }}>{show(before[k], format, k)}</TableCell>}
-            <TableCell sx={{ fontWeight: before ? 600 : 400 }}>{show(after[k], format, k)}</TableCell>
+            {before && <TableCell sx={{ color: "text.secondary", whiteSpace: "pre-line" }}>{show(before[k], format, k)}</TableCell>}
+            <TableCell sx={{ fontWeight: before ? 600 : 400, whiteSpace: "pre-line" }}>{show(after[k], format, k)}</TableCell>
           </TableRow>
         ))}
       </TableBody>

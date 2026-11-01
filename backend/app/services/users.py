@@ -5,23 +5,45 @@ import secrets
 import uuid
 
 from fastapi import HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.approval import ApprovalRequest
+from app.models.fund import Fund
 from app.models.identity import User, UserRole, UserStatus
 from app.models.mixins import utcnow
-from app.services import approvals, audit, identity, notifications, passwords
+from app.services import approvals, audit, fund_access, identity, notifications, passwords
 
 KIND = "user_access"
 
 
-def snapshot(user: User) -> dict:
+def _fund_codes(db: Session, fund_ids) -> list[str]:
+    """Fund access is shown and approved by fund code, which people recognise."""
+    ids = set(fund_ids)
+    if not ids:
+        return []
+    codes = list(db.execute(select(Fund.code).where(Fund.id.in_(ids))).scalars())
+    if len(codes) != len(ids):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "One of the chosen funds doesn't exist")
+    return sorted(codes)
+
+
+def _fund_ids(db: Session, codes: list[str]) -> set:
+    rows = dict(db.execute(select(Fund.code, Fund.id).where(Fund.code.in_(codes))).all()) if codes else {}
+    missing = [c for c in codes if c not in rows]
+    if missing:
+        raise HTTPException(status.HTTP_409_CONFLICT, f"Fund {', '.join(missing)} no longer exists — ask for the change again")
+    return set(rows.values())
+
+
+def snapshot(db: Session, user: User) -> dict:
     return {
         "email": user.email,
         "full_name": user.full_name,
         "phone": user.phone,
         "roles": [r.value for r in user.roles],
         "status": user.status.value,
+        "funds": _fund_codes(db, fund_access.granted_fund_ids(db, user.id)),
     }
 
 
@@ -30,7 +52,7 @@ def _role_names(roles: list[UserRole]) -> str:
 
 
 def propose_new_user(db: Session, maker: User, *, email: str, full_name: str, phone: str | None,
-                     roles: list[UserRole]) -> ApprovalRequest:
+                     roles: list[UserRole], fund_ids: list[uuid.UUID] | None = None) -> ApprovalRequest:
     email = email.strip().lower()
     if identity.find_by_email(db, email) is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "A user with this email already exists")
@@ -40,7 +62,7 @@ def propose_new_user(db: Session, maker: User, *, email: str, full_name: str, ph
         db, maker, KIND, entity_type="user", entity_id=None,
         summary=f"New user {full_name} <{email}> with {_role_names(roles)}",
         payload={"action": "create", "email": email, "full_name": full_name, "phone": phone,
-                 "roles": [r.value for r in roles]},
+                 "roles": [r.value for r in roles], "funds": _fund_codes(db, fund_ids or [])},
     )
     db.commit()
     db.refresh(request)
@@ -48,8 +70,9 @@ def propose_new_user(db: Session, maker: User, *, email: str, full_name: str, ph
 
 
 def propose_update(db: Session, maker: User, user: User, *, full_name: str | None, phone: str | None,
-                   roles: list[UserRole] | None, new_status: UserStatus | None) -> ApprovalRequest:
-    current = snapshot(user)
+                   roles: list[UserRole] | None, new_status: UserStatus | None,
+                   fund_ids: list[uuid.UUID] | None = None) -> ApprovalRequest:
+    current = snapshot(db, user)
     changes: dict = {}
     if full_name is not None and full_name != user.full_name:
         changes["full_name"] = full_name
@@ -61,6 +84,8 @@ def propose_update(db: Session, maker: User, user: User, *, full_name: str | Non
         changes["roles"] = sorted(r.value for r in roles)
     if new_status is not None and new_status != user.status:
         changes["status"] = new_status.value
+    if fund_ids is not None and _fund_codes(db, fund_ids) != current["funds"]:
+        changes["funds"] = _fund_codes(db, fund_ids)
     if not changes:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nothing has changed")
     request = approvals.submit(
@@ -83,15 +108,16 @@ def _apply(db: Session, request: ApprovalRequest, checker: User) -> None:
         user = identity.create_user(db, data["email"], secrets.token_urlsafe(32), [UserRole(r) for r in data["roles"]],
                                     full_name=data["full_name"], phone=data.get("phone"))
         request.entity_id = str(user.id)
+        fund_access.set_access(db, user.id, _fund_ids(db, data.get("funds", [])), checker.id)
         token = passwords.issue_token(db, user, "invite", checker.id)
         notifications.notify_invite(db, user, token, passwords.INVITE_DAYS)
-        audit.record(db, checker.id, "user", user.id, "created", after=snapshot(user))
+        audit.record(db, checker.id, "user", user.id, "created", after=snapshot(db, user))
         return
 
     user = db.get(User, uuid.UUID(request.entity_id))
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "That user no longer exists")
-    before = snapshot(user)
+    before = snapshot(db, user)
     if "full_name" in data:
         user.full_name = data["full_name"]
     if "phone" in data:
@@ -102,9 +128,11 @@ def _apply(db: Session, request: ApprovalRequest, checker: User) -> None:
         user.status = UserStatus(data["status"])
         if user.status != UserStatus.active:
             user.password_changed_at = utcnow()  # signs them out everywhere
+    if "funds" in data:
+        fund_access.set_access(db, user.id, _fund_ids(db, data["funds"]), checker.id)
     db.flush()
     db.refresh(user)
-    audit.record(db, checker.id, "user", user.id, "updated", before=before, after=snapshot(user))
+    audit.record(db, checker.id, "user", user.id, "updated", before=before, after=snapshot(db, user))
 
 
 approvals.register(approvals.ApprovalKind(

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import Alert from "@mui/material/Alert";
+import Autocomplete from "@mui/material/Autocomplete";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
 import Dialog from "@mui/material/Dialog";
@@ -27,8 +28,9 @@ import { TableStateRow } from "../../../components/TableStateRow";
 import { useFeedback } from "../../../components/feedback/FeedbackProvider";
 import { useAuth } from "../../../auth/AuthContext";
 import { useProposeUser, useProposeUserUpdate, useSendPasswordLink, useUsers } from "../../../queries/users";
+import { useFunds } from "../../../queries/funds";
 import { formatDateTime } from "../../../utils/date";
-import { PORTAL_ROLES, ROLE_LABELS, STAFF_ROLES, type User, type UserRole, type UserStatus } from "../../../api/types";
+import { ALL_FUNDS_ROLES, PORTAL_ROLES, ROLE_LABELS, STAFF_ROLES, type FundSummary, type User, type UserRole, type UserStatus } from "../../../api/types";
 
 function RolePicker({ value, onChange }: { value: UserRole[]; onChange: (roles: UserRole[]) => void }) {
   const toggle = (role: UserRole) => onChange(value.includes(role) ? value.filter((r) => r !== role) : [...value, role]);
@@ -52,6 +54,34 @@ function RolePicker({ value, onChange }: { value: UserRole[]; onChange: (roles: 
   );
 }
 
+// Staff who work inside funds need them assigned; admins and auditors see every fund.
+const needsFunds = (roles: UserRole[]) =>
+  !roles.some((r) => ALL_FUNDS_ROLES.includes(r)) && roles.some((r) => STAFF_ROLES.includes(r));
+
+function FundPicker({ value, onChange }: { value: string[]; onChange: (ids: string[]) => void }) {
+  const funds = useFunds();
+  const options = funds.data ?? [];
+  return (
+    <Autocomplete
+      multiple
+      options={options}
+      loading={funds.isLoading}
+      value={options.filter((f) => value.includes(f.id))}
+      onChange={(_, chosen: FundSummary[]) => onChange(chosen.map((f) => f.id))}
+      getOptionLabel={(f) => `${f.code} — ${f.name}`}
+      isOptionEqualToValue={(a, b) => a.id === b.id}
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          label="Funds this user administers"
+          helperText={funds.error ? `Couldn't load funds: ${funds.error.message}` : "They see only these funds' records and approvals."}
+          error={!!funds.error}
+        />
+      )}
+    />
+  );
+}
+
 function UserDialog({ user, onClose }: { user: User | null; onClose: () => void }) {
   const propose = useProposeUser();
   const update = useProposeUserUpdate();
@@ -61,6 +91,7 @@ function UserDialog({ user, onClose }: { user: User | null; onClose: () => void 
   const [phone, setPhone] = useState(user?.phone ?? "");
   const [roles, setRoles] = useState<UserRole[]>(user?.roles ?? []);
   const [status, setStatus] = useState<UserStatus>(user?.status ?? "active");
+  const [fundIds, setFundIds] = useState<string[]>(user?.fund_ids ?? []);
   const [error, setError] = useState<string | null>(null);
   const busy = propose.isPending || update.isPending;
 
@@ -73,9 +104,9 @@ function UserDialog({ user, onClose }: { user: User | null; onClose: () => void 
     }
     try {
       if (user) {
-        await update.mutateAsync({ id: user.id, input: { full_name: fullName, phone: phone || null, roles, status } });
+        await update.mutateAsync({ id: user.id, input: { full_name: fullName, phone: phone || null, roles, status, fund_ids: fundIds } });
       } else {
-        await propose.mutateAsync({ email, full_name: fullName, phone: phone || null, roles });
+        await propose.mutateAsync({ email, full_name: fullName, phone: phone || null, roles, fund_ids: fundIds });
       }
       feedback.success("Sent for approval — another administrator must approve it before it takes effect.");
       onClose();
@@ -107,6 +138,7 @@ function UserDialog({ user, onClose }: { user: User | null; onClose: () => void 
               </TextField>
             )}
             <RolePicker value={roles} onChange={setRoles} />
+            {needsFunds(roles) && <FundPicker value={fundIds} onChange={setFundIds} />}
             {error && <Alert severity="error">{error}</Alert>}
           </Stack>
         </DialogContent>
@@ -121,6 +153,13 @@ function UserDialog({ user, onClose }: { user: User | null; onClose: () => void 
   );
 }
 
+function fundsLabel(u: User, funds: FundSummary[] | undefined) {
+  if (u.roles.some((r) => ALL_FUNDS_ROLES.includes(r))) return "All funds";
+  if (!u.roles.some((r) => STAFF_ROLES.includes(r))) return "—";
+  if (u.fund_ids.length === 0) return "None";
+  return u.fund_ids.map((id) => funds?.find((f) => f.id === id)?.code ?? "…").join(", ");
+}
+
 function userStatus(u: User) {
   if (u.locked) return "locked";
   if (u.status === "active" && u.awaiting_setup) return "awaiting_setup";
@@ -133,6 +172,7 @@ export function UsersPage() {
   const isAdmin = me?.roles.includes("admin") ?? false;
   const [q, setQ] = useState("");
   const users = useUsers(q.trim());
+  const funds = useFunds();
   const sendLink = useSendPasswordLink();
   const feedback = useFeedback();
   const [editing, setEditing] = useState<User | "new" | null>(null);
@@ -168,6 +208,7 @@ export function UsersPage() {
               <TableCell>Name</TableCell>
               <TableCell>Email</TableCell>
               <TableCell>Roles</TableCell>
+              <TableCell>Funds</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>Last sign-in</TableCell>
               {isAdmin && <TableCell align="right">Actions</TableCell>}
@@ -175,7 +216,7 @@ export function UsersPage() {
           </TableHead>
           <TableBody>
             <TableStateRow
-              colSpan={isAdmin ? 6 : 5}
+              colSpan={isAdmin ? 7 : 6}
               loading={users.isLoading}
               error={users.error?.message ?? null}
               onRetry={() => users.refetch()}
@@ -189,6 +230,7 @@ export function UsersPage() {
                 <TableCell>
                   <Typography variant="body2">{u.roles.map((r) => ROLE_LABELS[r] ?? r).join(", ")}</Typography>
                 </TableCell>
+                <TableCell>{fundsLabel(u, funds.data)}</TableCell>
                 <TableCell>
                   <StatusChip status={userStatus(u)} />
                 </TableCell>

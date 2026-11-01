@@ -18,6 +18,8 @@ class UserOut(BaseModel):
     locked: bool = False
     # Invited but hasn't set a password yet.
     awaiting_setup: bool = False
+    # Funds the user administers (FR-SEC-001); admins and auditors see all regardless.
+    fund_ids: list[uuid.UUID] = []
 
     model_config = {"from_attributes": True}
 
@@ -27,6 +29,7 @@ class UserCreate(BaseModel):
     full_name: str = Field(min_length=2, max_length=200)
     phone: str | None = Field(default=None, max_length=40)
     roles: list[UserRole]
+    fund_ids: list[uuid.UUID] = []
 
 
 class UserUpdate(BaseModel):
@@ -34,3 +37,4 @@ class UserUpdate(BaseModel):
     phone: str | None = Field(default=None, max_length=40)
     roles: list[UserRole] | None = None
     status: UserStatus | None = None
+    fund_ids: list[uuid.UUID] | None = None

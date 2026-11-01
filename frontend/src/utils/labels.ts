@@ -12,6 +12,10 @@ export const STATUS_LABELS: Record<string, string> = {
   deactivated: "Deactivated",
   locked: "Locked",
   awaiting_setup: "Invitation sent",
+  // funds
+  closed_to_new_members: "Closed to new members",
+  wound_up: "Wound up",
+  change_pending: "Change awaiting approval",
   // approvals and requests
   draft: "Draft",
   pending: "Awaiting approval",
@@ -33,6 +37,9 @@ const TONES: Record<string, StatusTone> = {
   locked: "error",
   rejected: "error",
   deceased: "default",
+  closed_to_new_members: "warning",
+  wound_up: "default",
+  change_pending: "warning",
 };
 
 /** "pending" → "Awaiting approval"; unknown codes become "Sentence case". */

@@ -91,22 +91,27 @@ Open — the default in *italics* is what we build to until answered (from REQUI
 
 ## Phase 1 — Setup & reference data (FR-CFG)
 
-- [ ] Fund/company setup: code, name, address 1–5, phone, fax, TPIN, email, website, contact
+- [x] Fund/company setup: code, name, address 1–5, phone, fax, TPIN, email, website, contact
       person (name, email, phone, alt phone), fund type, registration no., trustees, bank
-      accounts; maker-checker. FR-CFG-001 — plan agreed 2026-11-01:
-  - [ ] Banks & branches reference table + seeded Malawi banks (part of FR-CFG-010).
-  - [ ] `fund` (+ status active / closed to new members / wound up, financial year-end month),
-        `fund_trustee`, `fund_bank_account` models + hand-written migration.
-  - [ ] `user_fund_access` scoping (carried over from Phase 0 auth): staff see assigned funds only,
-        admin/auditor see all, others get 404; maker auto-granted on approval; assign in Users screen.
-        FR-SEC-001
-  - [ ] Approval kind "Fund setup" (create + edit as one snapshot incl. trustees/bank accounts,
-        `scheme_config_maker` → `scheme_config_checker`); code/type locked once members exist;
-        account numbers masked in lists. FR-CFG-011, FR-SEC-002, FR-SEC-005
-  - [ ] Screens: Setup → Funds list, fund page (Details / Trustees / Bank accounts tabs),
-        sectioned create/edit form → "Submit for approval"; checker uses existing Approvals + DiffView.
-  - [ ] Tests (own-approval blocked, checker role, duplicate code, frozen fields, masking, scoping
-        404, approval creates children) + seed four invented funds.
+      accounts; maker-checker. FR-CFG-001 — done 2026-11-01, see `services/funds.py`,
+      `routes/staff/funds/`, migration `c47e2a91f0d3`:
+  - [x] Banks & branches reference table + seeded Malawi banks (part of FR-CFG-010) — 8 banks × 4
+        main-town branches (starter list, no SWIFT/branch codes); `GET /reference/banks`.
+  - [x] `fund` (+ status, financial year-end month), `fund_trustee`, `fund_bank_account` models +
+        hand-written migration (`alembic check` clean).
+  - [x] `user_fund_access` scoping: admin/auditor see all, other staff assigned funds only, else 404;
+        maker **and checker** auto-granted on approval of a new fund (checker added so the fund's later
+        edits can be approved without an admin grant); assigned in Users via `user_access` approval.
+        Approval engine is fund-scoped too (visibility, notifications, deciding). FR-SEC-001
+  - [x] Approval kind "Fund setup" (one snapshot incl. trustees/bank accounts); code/type lock once
+        members exist (hook returns False until Phase 3); account numbers masked for roles that don't
+        need them. FR-CFG-011, FR-SEC-002, FR-SEC-005
+  - [x] Screens: Funds list, fund page (Details / Trustees / Bank accounts tabs), sectioned
+        create/edit form; Approvals diff now shows only changed fields. Screenshots at 1440 + 390 viewed.
+  - [x] Tests: `tests/test_funds.py` (17) + `DiffView.test.tsx`; API smoke 17/17 incl. 401/403/404/
+        409/422; seed has four invented funds.
+- [ ] Bank & branch codes / SWIFT codes for the seeded banks (needs a confirmed list) and a
+      reference-data maintenance screen. FR-CFG-010
 - [ ] Processing month per fund: open period, close with checklist stub, re-open with approval;
       `periods.require_open`. FR-CFG-002
 - [ ] Participating employers / schemes under a fund (umbrella), with contribution day and contacts;
@@ -259,3 +264,8 @@ Open — the default in *italics* is what we build to until answered (from REQUI
 - 2026-11-01 — **Phase 0 verified on the host** (7 of 8 ticked; repo scaffold waits on Docker images +
   host-mode start script). Initial migration generated/applied, pytest 26/26, API smoke 19/19
   (scratchpad script), 14 screenshots viewed. Next: Phase 1 fund setup, starting with banks & branches.
+- 2026-11-01 — **Phase 1 fund setup verified and ticked** (banks/branches, funds + trustees + bank
+  accounts via `fund_setup` approval, `user_fund_access` scoping incl. the approval engine, masking,
+  Funds screens, fund picker in Users). pytest 43/43, vitest 33/33, tsc clean, API smoke 17/17,
+  screenshots of list/detail/tabs/form/approval diff/users at 1440 + 390 viewed, no JS exceptions.
+  Next: processing month per fund (FR-CFG-002).

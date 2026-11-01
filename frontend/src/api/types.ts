@@ -76,13 +76,18 @@ export interface User {
   created_at: string;
   locked: boolean;
   awaiting_setup: boolean;
+  fund_ids: string[];
 }
+
+// Roles that see every fund without being given access to each (FR-SEC-001).
+export const ALL_FUNDS_ROLES: UserRole[] = ["admin", "auditor"];
 
 export interface UserCreateInput {
   email: string;
   full_name: string;
   phone?: string | null;
   roles: UserRole[];
+  fund_ids?: string[];
 }
 
 export interface UserUpdateInput {
@@ -90,6 +95,130 @@ export interface UserUpdateInput {
   phone?: string | null;
   roles?: UserRole[];
   status?: UserStatus;
+  fund_ids?: string[];
+}
+
+// ---- Funds (FR-CFG-001) and reference data
+
+export type FundType = "standalone_dc" | "umbrella_dc" | "personal_pension" | "defined_benefit" | "minors_trust";
+export type FundStatus = "active" | "closed_to_new_members" | "wound_up";
+export type BankAccountPurpose = "collections" | "payments" | "general";
+
+export const FUND_TYPE_LABELS: Record<FundType, string> = {
+  standalone_dc: "Stand-alone DC",
+  umbrella_dc: "Umbrella DC",
+  personal_pension: "Personal pension",
+  defined_benefit: "Defined benefit",
+  minors_trust: "Minors' trust",
+};
+
+export const BANK_PURPOSE_LABELS: Record<BankAccountPurpose, string> = {
+  collections: "Contribution collections",
+  payments: "Benefit payments",
+  general: "General",
+};
+
+export interface BankBranch {
+  id: string;
+  name: string;
+  code: string | null;
+}
+
+export interface Bank {
+  id: string;
+  name: string;
+  short_name: string | null;
+  swift_code: string | null;
+  branches: BankBranch[];
+}
+
+export interface Trustee {
+  id: string;
+  full_name: string;
+  designation: string | null;
+  email: string | null;
+  phone: string | null;
+  appointed_on: string | null;
+}
+
+export interface FundBankAccount {
+  id: string;
+  bank_id: string;
+  bank_name: string;
+  branch_id: string | null;
+  branch_name: string | null;
+  account_name: string;
+  // Null when the viewer's roles only allow the masked number.
+  account_number: string | null;
+  account_number_masked: string;
+  currency: string;
+  purpose: BankAccountPurpose;
+}
+
+export interface FundSummary {
+  id: string;
+  code: string;
+  name: string;
+  fund_type: FundType;
+  status: FundStatus;
+  trustee_count: number;
+  bank_account_count: number;
+  pending_approval_id: string | null;
+}
+
+export interface FundDetails {
+  registration_number: string | null;
+  tpin: string | null;
+  financial_year_end_month: number | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  address_line3: string | null;
+  address_line4: string | null;
+  address_line5: string | null;
+  phone: string | null;
+  fax: string | null;
+  email: string | null;
+  website: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  contact_alt_phone: string | null;
+}
+
+export interface Fund extends FundSummary, FundDetails {
+  trustees: Trustee[];
+  bank_accounts: FundBankAccount[];
+  locked_fields: string[];
+  can_edit: boolean;
+}
+
+export interface TrusteeInput {
+  id?: string | null;
+  full_name: string;
+  designation?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  appointed_on?: string | null;
+}
+
+export interface BankAccountInput {
+  id?: string | null;
+  bank_id: string;
+  branch_id?: string | null;
+  account_name: string;
+  account_number: string;
+  currency: string;
+  purpose: BankAccountPurpose;
+}
+
+// The whole fund as it should be; create and edit both go to a checker.
+export interface FundInput extends FundDetails {
+  code: string;
+  name: string;
+  fund_type: FundType;
+  status: FundStatus;
+  trustees: TrusteeInput[];
+  bank_accounts: BankAccountInput[];
 }
 
 export type ApprovalStatus = "pending" | "approved" | "rejected" | "cancelled";

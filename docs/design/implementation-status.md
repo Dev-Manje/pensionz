@@ -44,5 +44,44 @@ notifications bell + page, change password, Users admin (propose create/change, 
 invitation/reset link), Approvals queue (to review / my requests / history, diff view,
 approve/reject/withdraw, deep link `/approvals/<id>`).
 
-**Not yet:** fund-scoped staff access (needs funds — Phase 1), OTP/MFA (FR-SEC-004, planned with
+**Not yet:** OTP/MFA (FR-SEC-004, planned with
 portal access in Phase 5), SMS channel.
+
+## Phase 1 — Setup & reference data
+
+### Fund setup (FR-CFG-001, FR-SEC-001, FR-SEC-005) — 2026-11-01
+
+Migration `c47e2a91f0d3_funds_and_banks.py`.
+
+- **Banks & branches** (`models/reference.py`: `bank`, `bank_branch`): the migration seeds 8 Malawi
+  commercial banks, each with Blantyre/Lilongwe/Mzuzu/Zomba branches, as a starter list (no SWIFT or
+  branch codes yet). `GET /api/v1/reference/banks` (any signed-in user) returns active banks + branches.
+  Maintenance screen comes with FR-CFG-010.
+- **Funds** (`models/fund.py`): `fund` (code ≤ 10 chars, unique case-insensitively; type standalone_dc /
+  umbrella_dc / personal_pension / defined_benefit / minors_trust; status active /
+  closed_to_new_members / wound_up; registration no., TPIN, financial-year-end month, address 1–5,
+  phone, fax, email, website, contact person), `fund_trustee`, `fund_bank_account` (bank, optional
+  branch, name, number, currency, purpose collections/payments/general). Removed trustees and bank
+  accounts are set `active = false`, never deleted.
+- **Maker-checker** (`services/funds.py`, approval kind `fund_setup`): `POST /funds` and
+  `PUT /funds/{id}` (role `scheme_config_maker`) send the **whole fund** (details + trustees + bank
+  accounts) as one snapshot → 202 with the approval request; a `scheme_config_checker` approves it.
+  `previous` holds the current snapshot; the Approvals diff shows only changed fields, with one line per
+  trustee/bank account. Checks: duplicate code against funds *and* pending new-fund requests (409),
+  one pending change per fund (409), branch must belong to the bank, no duplicate account numbers,
+  "Nothing has changed" (400). Code and fund type are locked once the fund has members
+  (`fund_has_members` returns False until Phase 3 adds members).
+- **Fund scoping** (`services/fund_access.py`, table `user_fund_access`): admins and auditors see every
+  fund; other staff only those granted to them; anything else is 404. On approval of a new fund, both
+  its maker and checker are granted it. Admins assign funds in Users (part of the `user_access`
+  approval, shown by fund code). The approval engine is fund-scoped too: a request with a `fund_id`
+  is visible to, notifies, and can be decided only by checkers who administer that fund.
+- **Masking:** fund detail returns the full account number only to admin, scheme setup maker/checker,
+  finance and finance checker; everyone gets `account_number_masked` ("•••• 4567").
+- **Frontend:** sidebar "Funds" (all staff) → `/funds` list (search, status, "Change awaiting
+  approval" chip), `/funds/<id>` (Details / Trustees / Bank accounts tabs, `?tab=`), `/funds/new` and
+  `/funds/<id>/edit` (sectioned form with repeatable trustees and bank accounts → "Submit for
+  approval"). Users screen: Funds column + fund picker for staff without all-fund access.
+- **Seed:** UMB01 (umbrella DC), LSS01 (stand-alone DC), MTDB1 (DB), PPF01 (personal pension) —
+  invented names, each with trustees and a collections account; every seeded fund-level staff user
+  administers all four.
