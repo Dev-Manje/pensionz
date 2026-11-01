@@ -128,8 +128,13 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       + principal-officer links; code unique per fund; due day 1–28 of the following month; new employers
       only in active funds. pytest 9 new, smoke 14/14, screenshots viewed. Shared `FormLayout` /
       `DetailSection` components extracted.
-- [ ] Benefit categories: DC design, EE/ER rates, salary basis, NRA, eligibility, vesting scale,
-      default option. FR-CFG-004
+- [x] Benefit categories: DC design, EE/ER rates, salary basis, NRA, eligibility, vesting scale,
+      default option. FR-CFG-004 — done 2026-11-01, see `services/categories.py`,
+      `routes/staff/funds/categories/`, migration `b6d2e8f40a19`. Category identity + effective-dated
+      **terms** (new terms only after the latest); validated on their date against regulatory minimums and
+      retirement band; DC needs an active default option of the fund, DB needs 1/N accrual + final-salary
+      months; group life multiple; raising a regulatory minimum lists categories that would fall below.
+      pytest 9 new, smoke 12/12, screenshots viewed.
 - [ ] Account types (Pension Fund, Member, Company, Reserve, Share) and transaction types
       (codes 1–6 with effect + paired reversal + GL mapping). FR-CFG-005, FR-CFG-006
 - [x] Investment options: declared-rate pools (unit-priced placeholder). FR-CFG-007 — done 2026-11-01,

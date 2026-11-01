@@ -152,3 +152,21 @@ of declared fields, code unique per fund incl. pending requests, fund-scoped sch
 audit). Rules: new options start active; pricing method can't change after creation; DB funds have
 none. API `GET|POST /funds/{id}/investment-options`, `PUT …/{option_id}`. Frontend: fund tab
 "Investment options" (table + create/change dialog). Seed: GEN + MMK (UMB01), GEN (LSS01, PPF01).
+
+### Benefit categories (FR-CFG-004) — 2026-11-01
+
+Migration `b6d2e8f40a19`: `benefit_category` (scheme, fund copy for scoping, code unique per scheme,
+name, status active/closed) and `benefit_category_terms` (versions from `effective_from`: design dc/db,
+EE/ER rate type percent|fixed + rate, salary basis, NRA, entry ages, waiting months, vesting scale JSON,
+default investment option, member choice, AVC allowed, group life multiple, DB accrual denominator and
+final-salary months). `services/categories.py`, approval kind `benefit_category`:
+- create = category + first terms; change = rename/close and/or new terms **after** the latest terms;
+- terms validated on their effective date: % rates ≥ regulatory minimums (fixed MWK rates not compared),
+  NRA within the retirement band; DC → employer rate + active default option of the same fund, no DB
+  fields; DB → accrual + averaging, employer rate = balance of cost, no options;
+- payload shows readable lines (rates, vesting, cover) with raw terms under `_terms`;
+- `config_resolver.category_terms(db, category_id, as_of)`;
+- proposing a higher regulatory minimum adds `categories_below_new_minimum` for the checker.
+API: `GET|POST /schemes/{id}/categories`, `GET|PUT /categories/{id}`. Frontend: employer tab "Benefit
+categories", category page (terms in force, scheduled, history) and create/change form with terms editor
+(vesting steps, DB formula section for DB funds). Seed: MGT/STF (CTE01), ALL (NBL01), STF (LSC01), TCH (MET01, DB).

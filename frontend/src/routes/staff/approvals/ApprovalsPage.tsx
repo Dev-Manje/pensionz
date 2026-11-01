@@ -76,7 +76,8 @@ function formatValue(key: string, value: unknown): string {
   if (Array.isArray(value)) {
     if (value.length === 0) return "—";
     if (typeof value[0] === "object") return value.map((row) => describeRow(key, row as Row)).join("\n");
-    if (key === "bands") return value.join("\n");
+    // Lists read best one item per line.
+    if (["bands", "vesting_scale", "categories_below_new_minimum"].includes(key)) return value.join("\n");
     return value.join(", ");
   }
   return String(value);

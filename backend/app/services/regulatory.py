@@ -110,11 +110,15 @@ def propose_parameter(db: Session, maker: User, key: str, value: Decimal, effect
 
     current = regulatory(db, key, effective_from)
     back_dated = effective_from < date.today()
+    from app.services.categories import categories_below
+
+    # Raising a minimum must not silently leave categories below it: show them to the checker.
+    below = categories_below(db, key, value, effective_from)
     request = approvals.submit(
         db, maker, PARAMETER_KIND, entity_type="regulatory_parameter", entity_id=key,
         summary=f"{p.label}: {format_value(p, value)} from {_day(effective_from)}" + (" (back-dated)" if back_dated else ""),
         payload={"parameter": p.label, "value": format_value(p, value), "effective_from": effective_from,
-                 "source": source, "_key": key, "_value": str(value)},
+                 "source": source, "categories_below_new_minimum": below or None, "_key": key, "_value": str(value)},
         previous={"parameter": p.label, "value": format_value(p, current) if current is not None else None},
     )
     db.commit()

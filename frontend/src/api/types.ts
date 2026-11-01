@@ -440,3 +440,61 @@ export interface InvestmentOption extends InvestmentOptionInput {
   fund_id: string;
   pending_approval_id: string | null;
 }
+
+// ---- Benefit categories (FR-CFG-004)
+
+export type CategoryStatus = "active" | "closed";
+export type BenefitDesign = "dc" | "db";
+export type RateType = "percent" | "fixed";
+export type SalaryBasis = "basic" | "basic_plus_allowances" | "total_emoluments";
+
+export const SALARY_BASIS_LABELS: Record<SalaryBasis, string> = {
+  basic: "Basic salary",
+  basic_plus_allowances: "Basic salary plus fixed allowances",
+  total_emoluments: "Total emoluments",
+};
+
+export interface VestingStep {
+  years: number;
+  vested_pct: string;
+}
+
+export interface CategoryTermsInput {
+  effective_from: string;
+  employee_rate_type: RateType;
+  employee_rate: string;
+  employer_rate_type: RateType;
+  employer_rate: string | null;
+  salary_basis: SalaryBasis;
+  normal_retirement_age: number | null;
+  min_entry_age: number | null;
+  max_entry_age: number | null;
+  waiting_period_months: number;
+  vesting_scale: VestingStep[];
+  default_investment_option_id: string | null;
+  member_choice_allowed: boolean;
+  avc_allowed: boolean;
+  group_life_multiple: string | null;
+  accrual_denominator: number | null;
+  final_salary_months: number | null;
+}
+
+export interface CategoryTerms extends CategoryTermsInput {
+  id: string;
+  design: BenefitDesign;
+  default_investment_option: string | null;
+}
+
+export interface BenefitCategory {
+  id: string;
+  scheme_id: string;
+  fund_id: string;
+  code: string;
+  name: string;
+  status: CategoryStatus;
+  design: BenefitDesign;
+  current: CategoryTerms | null;
+  upcoming: CategoryTerms | null;
+  history: CategoryTerms[];
+  pending_approval_id: string | null;
+}

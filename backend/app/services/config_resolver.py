@@ -8,6 +8,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.models.category import BenefitCategoryTerms
 from app.models.regulatory import RegulatoryParameterVersion, TaxTable, TaxTableKind
 
 CENT = Decimal("0.01")
@@ -20,6 +21,14 @@ def regulatory(db: Session, key: str, as_of: date) -> Decimal | None:
         .where(RegulatoryParameterVersion.key == key, RegulatoryParameterVersion.effective_from <= as_of)
         .order_by(RegulatoryParameterVersion.effective_from.desc())
         .limit(1)
+    ).scalar_one_or_none()
+
+
+def category_terms(db: Session, category_id, as_of: date) -> BenefitCategoryTerms | None:
+    """The benefit category's terms in force on `as_of` (None before its first terms)."""
+    return db.execute(
+        select(BenefitCategoryTerms).where(BenefitCategoryTerms.category_id == category_id, BenefitCategoryTerms.effective_from <= as_of)
+        .order_by(BenefitCategoryTerms.effective_from.desc()).limit(1)
     ).scalar_one_or_none()
 
 

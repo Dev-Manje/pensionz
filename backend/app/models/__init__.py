@@ -1,5 +1,6 @@
 from app.models.approval import ApprovalRequest, ApprovalStatus
 from app.models.audit import AuditEvent
+from app.models.category import BenefitCategory, BenefitCategoryTerms, BenefitDesign, CategoryStatus, RateType, SalaryBasis
 from app.models.fund import BankAccountPurpose, Fund, FundBankAccount, FundStatus, FundTrustee, FundType, UserFundAccess
 from app.models.identity import PasswordResetToken, User, UserRole, UserRoleAssignment, UserStatus
 from app.models.investment import InvestmentOption, InvestmentOptionStatus, PricingMethod
@@ -12,7 +13,7 @@ from app.models.scheme import BillingFrequency, Scheme, SchemeOfficer, SchemeSta
 
 __all__ = [
     "ApprovalRequest", "ApprovalStatus", "AuditEvent", "Bank", "BankAccountPurpose", "BankBranch", "Fund", "FundBankAccount",
-    "BillingFrequency", "InvestmentOption", "InvestmentOptionStatus", "PricingMethod", "RegulatoryParameterVersion", "TaxBand", "TaxTable", "TaxTableKind", "FundPeriod", "Scheme", "SchemeOfficer", "SchemeStatus", "FundStatus", "FundTrustee", "FundType", "PeriodStatus", "UserFundAccess", "JobRun", "JobRunStatus", "NotificationChannel",
+    "BenefitCategory", "BenefitCategoryTerms", "BenefitDesign", "BillingFrequency", "CategoryStatus", "RateType", "SalaryBasis", "InvestmentOption", "InvestmentOptionStatus", "PricingMethod", "RegulatoryParameterVersion", "TaxBand", "TaxTable", "TaxTableKind", "FundPeriod", "Scheme", "SchemeOfficer", "SchemeStatus", "FundStatus", "FundTrustee", "FundType", "PeriodStatus", "UserFundAccess", "JobRun", "JobRunStatus", "NotificationChannel",
     "NotificationOutbox", "OutboxStatus", "PasswordResetToken", "User", "UserNotification", "UserRole",
     "UserRoleAssignment", "UserStatus",
 ]

@@ -24,8 +24,9 @@ import { useScheme } from "../../../../queries/schemes";
 import { formatDate } from "../../../../utils/date";
 import { BILLING_FREQUENCY_LABELS, type Scheme } from "../../../../api/types";
 import { dueDayLabel } from "./schemeLabels";
+import { SchemeCategoriesTab } from "../categories/SchemeCategoriesTab";
 
-const TABS = ["details", "officers"] as const;
+const TABS = ["details", "categories", "officers"] as const;
 type SchemeTab = (typeof TABS)[number];
 
 function Details({ scheme }: { scheme: Scheme }) {
@@ -148,9 +149,11 @@ export function SchemeDetailPage() {
       )}
       <Tabs value={tab} onChange={(_, v: SchemeTab) => setTab(v)} sx={{ mb: 2 }} variant="scrollable" scrollButtons="auto">
         <Tab value="details" label="Details" />
+        <Tab value="categories" label="Benefit categories" />
         <Tab value="officers" label={`Principal officers (${scheme.officers.length})`} />
       </Tabs>
       {tab === "details" && <Details scheme={scheme} />}
+      {tab === "categories" && <SchemeCategoriesTab scheme={scheme} />}
       {tab === "officers" && <Officers scheme={scheme} />}
     </>
   );

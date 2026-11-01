@@ -18,6 +18,7 @@ from app.models.fund import BankAccountPurpose, Fund, FundBankAccount, FundTrust
 from app.models.identity import STAFF_ROLES, UserRole
 from app.models.mixins import utcnow
 from app.models.period import FundPeriod, PeriodStatus
+from app.models.category import BenefitCategory, BenefitCategoryTerms, BenefitDesign
 from app.models.investment import InvestmentOption, PricingMethod
 from app.models.reference import Bank
 from app.models.regulatory import RegulatoryParameterVersion, TaxBand, TaxTable, TaxTableKind
@@ -152,6 +153,36 @@ def seed_options(db) -> None:
                                     launch_date=date(2024, 1, 1), description="Earns the bonus rate the trustees declare each half-year."))
 
 
+# (scheme code, category code, name, EE %, ER %, NRA) — DB categories get 1/60 and 36 months.
+CATEGORIES = [
+    ("CTE01", "MGT", "Management", "7.5", "15", 60), ("CTE01", "STF", "Staff", "5", "10", 60),
+    ("NBL01", "ALL", "All employees", "5", "10", 60), ("LSC01", "STF", "Permanent staff", "5", "12", 60),
+    ("MET01", "TCH", "Teaching staff", "6", None, 60),
+]
+VESTING = [{"years": 0, "vested_pct": "0"}, {"years": 2, "vested_pct": "50"}, {"years": 5, "vested_pct": "100"}]
+
+
+def seed_categories(db) -> None:
+    for scheme_code, code, name, ee, er, nra in CATEGORIES:
+        scheme = db.execute(select(Scheme).where(Scheme.code == scheme_code)).scalar_one()
+        if db.execute(select(BenefitCategory.id).where(BenefitCategory.scheme_id == scheme.id, BenefitCategory.code == code)).first():
+            continue
+        fund = db.get(Fund, scheme.fund_id)
+        category = BenefitCategory(scheme_id=scheme.id, fund_id=fund.id, code=code, name=name)
+        db.add(category)
+        db.flush()
+        is_db = fund.fund_type == FundType.defined_benefit
+        option = None if is_db else db.execute(
+            select(InvestmentOption).where(InvestmentOption.fund_id == fund.id, InvestmentOption.code == "GEN")).scalar_one()
+        db.add(BenefitCategoryTerms(
+            category_id=category.id, effective_from=date(2024, 1, 1), design=BenefitDesign.db if is_db else BenefitDesign.dc,
+            employee_rate=Decimal(ee), employer_rate=Decimal(er) if er else None, normal_retirement_age=nra,
+            min_entry_age=18, max_entry_age=55, waiting_period_months=0 if is_db else 3,
+            vesting_scale=[] if is_db else VESTING, default_investment_option_id=option.id if option else None,
+            group_life_multiple=Decimal("3"), accrual_denominator=60 if is_db else None, final_salary_months=36 if is_db else None,
+        ))
+
+
 # Working defaults until confirmed (TASKS.md → Open decisions → "Regulatory figures").
 REGULATORY_DEFAULTS = {
     "min_employee_contribution_pct": "5", "min_employer_contribution_pct": "10", "max_lump_sum_pct": "50",
@@ -194,6 +225,7 @@ def main() -> None:
         seed_schemes(db)
         seed_regulatory(db)
         seed_options(db)
+        seed_categories(db)
         db.commit()
     print(f"Seed complete: {created} user(s), {funds} fund(s) created (password for all: {DEV_PASSWORD}).")
 
