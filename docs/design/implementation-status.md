@@ -142,3 +142,13 @@ source; unique per key+date), `tax_table` (kind paye_monthly / lump_sum, effecti
   Payload keys starting with `_` are hidden from the approval diff. Tabs no longer show scroll arrows
   (theme default `scrollButtons: false`).
 - Dev seed: working defaults from 1 Jan 2023 and a PAYE table from 1 Apr 2024, both marked "to confirm".
+
+### Investment options (FR-CFG-007) — 2026-11-01
+
+Migration `a93e1f5b7c28`: `investment_option` (fund, code unique per fund, name, pricing method
+declared_rate / unit_price, status active / closed, launch date, description). Built on
+**`services/config_changes.FundConfig`** — the shared maker-checker for simple per-fund records (snapshot
+of declared fields, code unique per fund incl. pending requests, fund-scoped scheme-setup checker,
+audit). Rules: new options start active; pricing method can't change after creation; DB funds have
+none. API `GET|POST /funds/{id}/investment-options`, `PUT …/{option_id}`. Frontend: fund tab
+"Investment options" (table + create/change dialog). Seed: GEN + MMK (UMB01), GEN (LSS01, PPF01).

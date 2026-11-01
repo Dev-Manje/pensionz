@@ -31,11 +31,13 @@ import {
   BANK_PURPOSE_LABELS,
   BILLING_FREQUENCY_LABELS,
   FUND_TYPE_LABELS,
+  PRICING_METHOD_LABELS,
   ROLE_LABELS,
   type Approval,
   type BankAccountPurpose,
   type BillingFrequency,
   type FundType,
+  type PricingMethod,
   type UserRole,
 } from "../../../api/types";
 import { dueDayLabel } from "../funds/schemes/schemeLabels";
@@ -67,6 +69,7 @@ function formatValue(key: string, value: unknown): string {
   if (key === "fund_type") return FUND_TYPE_LABELS[value as FundType] ?? String(value);
   if (key === "financial_year_end_month") return MONTH_NAMES[Number(value) - 1] ?? String(value);
   if (key === "contribution_day") return dueDayLabel(Number(value));
+  if (key === "pricing_method") return PRICING_METHOD_LABELS[value as PricingMethod] ?? String(value);
   if (key === "billing_frequency") return BILLING_FREQUENCY_LABELS[value as BillingFrequency] ?? String(value);
   if ((key.endsWith("_date") || key === "effective_from") && typeof value === "string") return formatDate(value);
   if (key === "status") return statusLabel(String(value));

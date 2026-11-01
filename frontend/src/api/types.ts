@@ -415,3 +415,28 @@ export interface TaxCalc {
   tax: string;
   table_effective_from: string | null;
 }
+
+// ---- Investment options (FR-CFG-007)
+
+export type PricingMethod = "declared_rate" | "unit_price";
+export type InvestmentOptionStatus = "active" | "closed";
+
+export const PRICING_METHOD_LABELS: Record<PricingMethod, string> = {
+  declared_rate: "Declared rate (bonus)",
+  unit_price: "Unit priced",
+};
+
+export interface InvestmentOptionInput {
+  code: string;
+  name: string;
+  pricing_method: PricingMethod;
+  status: InvestmentOptionStatus;
+  launch_date: string | null;
+  description: string | null;
+}
+
+export interface InvestmentOption extends InvestmentOptionInput {
+  id: string;
+  fund_id: string;
+  pending_approval_id: string | null;
+}

@@ -132,7 +132,11 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       default option. FR-CFG-004
 - [ ] Account types (Pension Fund, Member, Company, Reserve, Share) and transaction types
       (codes 1–6 with effect + paired reversal + GL mapping). FR-CFG-005, FR-CFG-006
-- [ ] Investment options: declared-rate pools (unit-priced placeholder). FR-CFG-007
+- [x] Investment options: declared-rate pools (unit-priced placeholder). FR-CFG-007 — done 2026-11-01,
+      see `services/investment_options.py`, `routes/staff/funds/FundOptionsTab.tsx`, migration `a93e1f5b7c28`.
+      Uses the new shared per-fund maker-checker `services/config_changes.FundConfig` (kind
+      `investment_option`); pricing method fixed once set; none for DB funds. pytest 5 new, smoke 9/9,
+      screenshots viewed.
 - [ ] Fee rules. FR-CFG-008
 - [x] Regulatory parameters & tax tables (effective-dated) with validation of category rates. FR-CFG-009
       — done 2026-11-01, see `services/regulatory.py`, `services/config_resolver.py`,

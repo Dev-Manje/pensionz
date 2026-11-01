@@ -18,6 +18,7 @@ from app.models.fund import BankAccountPurpose, Fund, FundBankAccount, FundTrust
 from app.models.identity import STAFF_ROLES, UserRole
 from app.models.mixins import utcnow
 from app.models.period import FundPeriod, PeriodStatus
+from app.models.investment import InvestmentOption, PricingMethod
 from app.models.reference import Bank
 from app.models.regulatory import RegulatoryParameterVersion, TaxBand, TaxTable, TaxTableKind
 from app.models.scheme import Scheme, SchemeOfficer
@@ -136,6 +137,21 @@ def seed_schemes(db) -> None:
             scheme.officers.append(SchemeOfficer(user_id=identity.find_by_email(db, officer_email).id))
 
 
+# Declared-rate pools for the DC and personal funds (the DB fund has none).
+OPTIONS = [
+    ("UMB01", "GEN", "General Pool"), ("UMB01", "MMK", "Money Market Pool"),
+    ("LSS01", "GEN", "General Pool"), ("PPF01", "GEN", "General Pool"),
+]
+
+
+def seed_options(db) -> None:
+    for fund_code, code, name in OPTIONS:
+        fund = db.execute(select(Fund).where(Fund.code == fund_code)).scalar_one()
+        if db.execute(select(InvestmentOption.id).where(InvestmentOption.fund_id == fund.id, InvestmentOption.code == code)).first() is None:
+            db.add(InvestmentOption(fund_id=fund.id, code=code, name=name, pricing_method=PricingMethod.declared_rate,
+                                    launch_date=date(2024, 1, 1), description="Earns the bonus rate the trustees declare each half-year."))
+
+
 # Working defaults until confirmed (TASKS.md → Open decisions → "Regulatory figures").
 REGULATORY_DEFAULTS = {
     "min_employee_contribution_pct": "5", "min_employer_contribution_pct": "10", "max_lump_sum_pct": "50",
@@ -177,6 +193,7 @@ def main() -> None:
         seed_periods(db)
         seed_schemes(db)
         seed_regulatory(db)
+        seed_options(db)
         db.commit()
     print(f"Seed complete: {created} user(s), {funds} fund(s) created (password for all: {DEV_PASSWORD}).")
 

@@ -24,12 +24,13 @@ import { StatusChip } from "../../../components/StatusChip";
 import { TableStateRow } from "../../../components/TableStateRow";
 import { useUrlTab } from "../../../hooks/useUrlState";
 import { useFund } from "../../../queries/funds";
+import { FundOptionsTab } from "./FundOptionsTab";
 import { FundPeriodsTab } from "./FundPeriodsTab";
 import { FundSchemesTab } from "./schemes/FundSchemesTab";
 import { formatDate, formatPeriod, MONTH_NAMES } from "../../../utils/date";
 import { BANK_PURPOSE_LABELS, FUND_TYPE_LABELS, type Fund } from "../../../api/types";
 
-const TABS = ["details", "employers", "trustees", "bank-accounts", "processing-months"] as const;
+const TABS = ["details", "employers", "investment-options", "trustees", "bank-accounts", "processing-months"] as const;
 type FundTab = (typeof TABS)[number];
 
 function Details({ fund }: { fund: Fund }) {
@@ -135,7 +136,7 @@ export function FundDetailPage() {
   const { fundId } = useParams();
   const query = useFund(fundId);
   const [tab, setTab] = useUrlTab(TABS);
-  // Five tabs fit on a desktop; phones scroll them sideways.
+  // The tabs fit on a desktop; phones scroll them sideways.
   const narrow = useMediaQuery(useTheme().breakpoints.down("md"));
 
   if (query.isLoading) return <LoadingState />;
@@ -188,12 +189,14 @@ export function FundDetailPage() {
       <Tabs value={tab} onChange={(_, v: FundTab) => setTab(v)} sx={{ mb: 2 }} variant={narrow ? "scrollable" : "standard"} scrollButtons="auto">
         <Tab value="details" label="Details" />
         <Tab value="employers" label="Employers" />
+        <Tab value="investment-options" label="Investment options" />
         <Tab value="trustees" label={`Trustees (${fund.trustees.length})`} />
         <Tab value="bank-accounts" label={`Bank accounts (${fund.bank_accounts.length})`} />
         <Tab value="processing-months" label="Processing months" />
       </Tabs>
       {tab === "details" && <Details fund={fund} />}
       {tab === "employers" && <FundSchemesTab fund={fund} />}
+      {tab === "investment-options" && <FundOptionsTab fund={fund} />}
       {tab === "trustees" && <Trustees fund={fund} />}
       {tab === "bank-accounts" && <BankAccounts fund={fund} />}
       {tab === "processing-months" && <FundPeriodsTab fund={fund} />}

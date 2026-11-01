@@ -32,6 +32,7 @@ export function useDecideApproval() {
       queryClient.invalidateQueries({ queryKey: ["funds"] });
       queryClient.invalidateQueries({ queryKey: ["schemes"] });
       queryClient.invalidateQueries({ queryKey: ["regulatory"] });
+      queryClient.invalidateQueries({ queryKey: ["investment-options"] });
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
