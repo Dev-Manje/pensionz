@@ -68,11 +68,12 @@ function formatValue(key: string, value: unknown): string {
   if (key === "financial_year_end_month") return MONTH_NAMES[Number(value) - 1] ?? String(value);
   if (key === "contribution_day") return dueDayLabel(Number(value));
   if (key === "billing_frequency") return BILLING_FREQUENCY_LABELS[value as BillingFrequency] ?? String(value);
-  if (key.endsWith("_date") && typeof value === "string") return formatDate(value);
+  if ((key.endsWith("_date") || key === "effective_from") && typeof value === "string") return formatDate(value);
   if (key === "status") return statusLabel(String(value));
   if (Array.isArray(value)) {
     if (value.length === 0) return "—";
     if (typeof value[0] === "object") return value.map((row) => describeRow(key, row as Row)).join("\n");
+    if (key === "bands") return value.join("\n");
     return value.join(", ");
   }
   return String(value);

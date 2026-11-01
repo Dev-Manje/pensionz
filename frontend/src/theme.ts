@@ -93,7 +93,8 @@ export const theme = createTheme({
     // Tab bars scroll (with arrows on phones) instead of cutting off the last
     // tabs on narrow screens. A screen can still pass its own variant.
     MuiTabs: {
-      defaultProps: { variant: "scrollable", scrollButtons: "auto", allowScrollButtonsMobile: true },
+      // Scrollable so long tab bars swipe on phones; no arrow buttons (they lingered after resizes).
+      defaultProps: { variant: "scrollable", scrollButtons: false },
     },
     MuiChip: {
       styleOverrides: {

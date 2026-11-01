@@ -52,7 +52,10 @@ Open — the default in *italics* is what we build to until answered (from REQUI
 - [ ] **Individual KYC items 28–32** — *next of kin.*
 - [ ] **Regulatory figures** — *EE 5% / ER 10% minimums, lump sum max 50%, retirement 50–70,
       unemployment access after 3 months, 50% access within 5 years of NRA; all editable
-      effective-dated parameters.*
+      effective-dated parameters.* — built 2026-11-01 (Regulatory screen); production values are
+      entered there through approval. Also to confirm with MRA: **PAYE bands on pensions** (dev seed:
+      0/25/30/35% at 150k/500k/2.55m) and **tax on lump sums** (no table yet). Small-balance threshold
+      and late-payment interest have no default.
 - [ ] **Chart of accounts & posting recipes** (`pz-accounting`) — *build as proposed; finance to
       confirm.* Needed by Phase 4.
 - [ ] **Banks, payment file formats, mobile money** — *cheque + generic EFT CSV export.* Phase 9.
@@ -131,7 +134,13 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       (codes 1–6 with effect + paired reversal + GL mapping). FR-CFG-005, FR-CFG-006
 - [ ] Investment options: declared-rate pools (unit-priced placeholder). FR-CFG-007
 - [ ] Fee rules. FR-CFG-008
-- [ ] Regulatory parameters & tax tables (effective-dated) with validation of category rates. FR-CFG-009
+- [x] Regulatory parameters & tax tables (effective-dated) with validation of category rates. FR-CFG-009
+      — done 2026-11-01, see `services/regulatory.py`, `services/config_resolver.py`,
+      `routes/staff/regulatory/`, migration `f2b8d4e61c07`. Ten parameters + PAYE/lump-sum tax tables as
+      versions from a date (approval kinds `regulatory_parameter`, `tax_table`); back-dated changes are
+      flagged; no figures in migrations (dev seed only). Category-rate validation itself lands with
+      benefit categories (next item uses `config_resolver.regulatory`). pytest 9 new, smoke 15/15,
+      screenshots viewed.
 - [ ] Reference data: banks/branches, districts/TAs/villages, countries/nationalities, relationships,
       ID & permit types, salutations. FR-CFG-010
 - [ ] Config diff view + effective dates on approval. FR-CFG-011

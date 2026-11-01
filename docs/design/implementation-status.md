@@ -120,3 +120,25 @@ Frontend: fund page tab "Employers", `/funds/<id>/employers/<schemeId>` (Details
 sectioned create/edit form with an officer picker. Shared form/detail building blocks now live in
 `components/form/FormLayout.tsx` and `components/DetailSection.tsx`. Fund tabs scroll only on narrow
 screens. Seed: CTE01 + NBL01 (UMB01), LSC01 (LSS01), MET01 (MTDB1); po@pensionz.dev linked to CTE01 and LSC01.
+
+### Regulatory parameters & tax tables (FR-CFG-009) — 2026-11-01
+
+Migration `f2b8d4e61c07_regulatory.py`: `regulatory_parameter_version` (key, value, effective_from,
+source; unique per key+date), `tax_table` (kind paye_monthly / lump_sum, effective_from, source) with
+`tax_band` (lower bound + rate; the next band's lower bound is the upper). **No figures in migrations.**
+- `services/regulatory.py` lists the ten known parameters (label, unit, allowed range, help, group):
+  minimum EE/ER contribution %, late-payment interest %, earliest/latest retirement age, maximum lump
+  sum %, small-balance threshold, unemployment access wait (months), pre-retirement access window
+  (years) and limit %. A change is a new version from a date → approval kind `regulatory_parameter`
+  (scheme setup maker → checker); same key+date twice → 409; whole units for ages/months/years;
+  back-dated versions are marked in the summary. New tax table versions → kind `tax_table` (bands
+  must start at 0, ascend, rates 0–100%).
+- `services/config_resolver.py` — the single resolver: `regulatory(db, key, as_of)`,
+  `tax_table(db, kind, as_of)`, `tax_on(table, amount)` (progressive, half-up per band).
+- API: `GET /regulatory/parameters`, `POST /regulatory/parameters/{key}/versions`,
+  `GET|POST /regulatory/tax-tables/{kind}`, `GET /regulatory/tax-tables/{kind}/calculate?amount=&as_of=`.
+- Frontend: sidebar "Regulatory" (all staff) with Parameters (grouped, in force / scheduled / history,
+  change dialog with back-dating warning) and Tax tables (bands, calculator, new-version band editor).
+  Payload keys starting with `_` are hidden from the approval diff. Tabs no longer show scroll arrows
+  (theme default `scrollButtons: false`).
+- Dev seed: working defaults from 1 Jan 2023 and a PAYE table from 1 Apr 2024, both marked "to confirm".

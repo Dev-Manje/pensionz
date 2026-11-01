@@ -39,7 +39,7 @@ export function DiffView({
 }) {
   const blank = (v: unknown) => v === null || v === undefined || v === "" || (Array.isArray(v) && v.length === 0);
   const keys = Object.keys(after).filter(
-    (k) => !hide.includes(k) && (before ? !(k in before && same(before[k], after[k])) : !blank(after[k])),
+    (k) => !hide.includes(k) && !k.startsWith("_") && (before ? !(k in before && same(before[k], after[k])) : !blank(after[k])),
   );
   if (keys.length === 0) return <Typography color="text.secondary">No details.</Typography>;
   return (

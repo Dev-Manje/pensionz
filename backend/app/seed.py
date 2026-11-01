@@ -1,10 +1,15 @@
-"""Dev seed: one user per role (plus a second admin, so user-access changes
-can be approved). Safe to run repeatedly — existing users are left alone.
+"""Dev seed, safe to run repeatedly (existing rows are left alone):
+- one user per role, plus a second admin so user-access changes can be approved;
+- four invented funds (umbrella DC, stand-alone DC, DB, personal pension) with
+  trustees, a bank account, employers and an open processing month, administered
+  by every seeded fund-level staff user;
+- working regulatory defaults and a PAYE table — both still to be confirmed.
 
-    docker compose exec backend python -m app.seed
+    python -m app.seed      (from backend/)
 
 Logins are listed in TEST_USERS.md."""
 from datetime import date
+from decimal import Decimal
 
 from sqlalchemy import select
 
@@ -14,6 +19,7 @@ from app.models.identity import STAFF_ROLES, UserRole
 from app.models.mixins import utcnow
 from app.models.period import FundPeriod, PeriodStatus
 from app.models.reference import Bank
+from app.models.regulatory import RegulatoryParameterVersion, TaxBand, TaxTable, TaxTableKind
 from app.models.scheme import Scheme, SchemeOfficer
 from app.services import fund_access, identity
 
@@ -130,6 +136,28 @@ def seed_schemes(db) -> None:
             scheme.officers.append(SchemeOfficer(user_id=identity.find_by_email(db, officer_email).id))
 
 
+# Working defaults until confirmed (TASKS.md → Open decisions → "Regulatory figures").
+REGULATORY_DEFAULTS = {
+    "min_employee_contribution_pct": "5", "min_employer_contribution_pct": "10", "max_lump_sum_pct": "50",
+    "min_retirement_age": "50", "max_retirement_age": "70", "unemployment_access_wait_months": "3",
+    "pre_retirement_access_years": "5", "pre_retirement_access_max_pct": "50",
+}
+REGULATORY_FROM = date(2023, 1, 1)
+# Monthly PAYE bands as understood for 2024 — TO CONFIRM with MRA before any real use.
+PAYE_BANDS = [("0", "0"), ("150000", "25"), ("500000", "30"), ("2550000", "35")]
+
+
+def seed_regulatory(db) -> None:
+    for key, value in REGULATORY_DEFAULTS.items():
+        if db.execute(select(RegulatoryParameterVersion.id).where(RegulatoryParameterVersion.key == key)).first() is None:
+            db.add(RegulatoryParameterVersion(key=key, value=Decimal(value), effective_from=REGULATORY_FROM,
+                                              source="Dev seed — working default, to confirm (Pension Act 2023)"))
+    if db.execute(select(TaxTable.id).where(TaxTable.kind == TaxTableKind.paye_monthly)).first() is None:
+        table = TaxTable(kind=TaxTableKind.paye_monthly, effective_from=date(2024, 4, 1), source="Dev seed — to confirm with MRA")
+        table.bands = [TaxBand(position=i, lower=Decimal(lo), rate_pct=Decimal(rate)) for i, (lo, rate) in enumerate(PAYE_BANDS)]
+        db.add(table)
+
+
 # PPF01 is left without a processing month, to show that state.
 OPEN_MONTH = date(2026, 11, 1)
 
@@ -148,6 +176,7 @@ def main() -> None:
         grant_seed_access(db)
         seed_periods(db)
         seed_schemes(db)
+        seed_regulatory(db)
         db.commit()
     print(f"Seed complete: {created} user(s), {funds} fund(s) created (password for all: {DEV_PASSWORD}).")
 

@@ -16,6 +16,10 @@ export const STATUS_LABELS: Record<string, string> = {
   closed_to_new_members: "Closed to new members",
   wound_up: "Wound up",
   exited: "Exited",
+  // effective-dated configuration
+  in_force: "In force",
+  scheduled: "Scheduled",
+  not_set: "Not set",
   change_pending: "Change awaiting approval",
   // processing months
   open: "Open",
@@ -47,6 +51,9 @@ const TONES: Record<string, StatusTone> = {
   closed_to_new_members: "warning",
   wound_up: "default",
   exited: "default",
+  in_force: "success",
+  scheduled: "info",
+  not_set: "warning",
   change_pending: "warning",
   open: "success",
   closed: "default",

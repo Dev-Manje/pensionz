@@ -383,7 +383,10 @@ User/Role/FundAccess · AuditEvent · Notification/Outbox · MigrationBatch.
    Number): are these next of kin, a third-party funder, or a beneficiary?
 9. **Regulatory figures** to confirm: minimum contribution rates, lump-sum maximum (50%),
    unemployment wait (3 months), pre-retirement access (50% within 5 years), small-balance
-   threshold, late-payment interest, vesting minimums, tax on benefits.
+   threshold, late-payment interest, vesting minimums, tax on benefits. *Built 2026-11-01 as
+   effective-dated parameters + tax tables (Regulatory screen); the dev seed uses the working defaults
+   and monthly PAYE bands 0% to MWK 150,000 / 25% to 500,000 / 30% to 2,550,000 / 35% above — confirm
+   the PAYE bands and the lump-sum tax rules with MRA before production values are entered.*
 10. **Payments:** which banks; bank file formats; cheques still used; mobile-money payouts.
 11. **Chart of accounts and journal recipes** in `pz-accounting`: confirm with finance;
     integration with Old Mutual's corporate GL.

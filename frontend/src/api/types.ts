@@ -353,3 +353,65 @@ export interface SchemeInput extends SchemeDetails {
   contact_name: string | null;
   officer_ids: string[];
 }
+
+// ---- Regulatory parameters & tax tables (FR-CFG-009)
+
+export type ParameterUnit = "percent" | "years" | "months" | "age" | "money";
+
+export interface ParameterVersion {
+  id: string;
+  value: string;
+  display: string;
+  effective_from: string;
+  source: string | null;
+}
+
+export interface RegulatoryParameter {
+  key: string;
+  label: string;
+  unit: ParameterUnit;
+  group: string;
+  help: string;
+  minimum: string;
+  maximum: string;
+  current: ParameterVersion | null;
+  upcoming: ParameterVersion | null;
+  versions: ParameterVersion[];
+  pending_approval_id: string | null;
+}
+
+export type TaxTableKind = "paye_monthly" | "lump_sum";
+
+export const TAX_TABLE_LABELS: Record<TaxTableKind, string> = {
+  paye_monthly: "PAYE on pensions (monthly)",
+  lump_sum: "Tax on lump sums",
+};
+
+export interface TaxBand {
+  lower: string;
+  upper: string | null;
+  rate_pct: string;
+}
+
+export interface TaxTable {
+  id: string;
+  kind: TaxTableKind;
+  effective_from: string;
+  source: string | null;
+  bands: TaxBand[];
+}
+
+export interface TaxTables {
+  kind: TaxTableKind;
+  label: string;
+  current: TaxTable | null;
+  upcoming: TaxTable | null;
+  versions: TaxTable[];
+  pending_approval_id: string | null;
+}
+
+export interface TaxCalc {
+  amount: string;
+  tax: string;
+  table_effective_from: string | null;
+}
