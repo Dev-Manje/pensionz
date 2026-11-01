@@ -25,6 +25,7 @@ import SavingsOutlinedIcon from "@mui/icons-material/SavingsOutlined";
 import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
 import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlined";
 import GavelOutlinedIcon from "@mui/icons-material/GavelOutlined";
+import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import { useAuth } from "../auth/AuthContext";
 import { RouteErrorBoundary } from "../components/RouteErrorBoundary";
 import { NotificationBell } from "../components/notifications/NotificationBell";
@@ -36,6 +37,7 @@ import { ApprovalsPage } from "./staff/approvals/ApprovalsPage";
 import { UsersPage } from "./staff/admin/UsersPage";
 import { FundsPage } from "./staff/funds/FundsPage";
 import { RegulatoryPage } from "./staff/regulatory/RegulatoryPage";
+import { SetupPage } from "./staff/setup/SetupPage";
 import { MemberHome } from "./member/MemberHome";
 import { PoHome } from "./po/PoHome";
 import { ROLE_LABELS, STAFF_ROLES } from "../api/types";
@@ -69,6 +71,7 @@ const SECTIONS: Section[] = [
   { path: "approvals", label: "Approvals", icon: <CheckCircleOutlineIcon />, roles: STAFF_ROLES, element: <ApprovalsPage /> },
   { path: "funds", label: "Funds", icon: <AccountBalanceOutlinedIcon />, roles: STAFF_ROLES, element: <FundsPage /> },
   { path: "regulatory", label: "Regulatory", icon: <GavelOutlinedIcon />, roles: STAFF_ROLES, element: <RegulatoryPage /> },
+  { path: "setup", label: "Setup", icon: <SettingsOutlinedIcon />, roles: STAFF_ROLES, element: <SetupPage /> },
   { path: "users", label: "Users", icon: <PersonOutlineIcon />, roles: ["admin", "auditor"], element: <UsersPage /> },
 ];
 

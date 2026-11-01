@@ -34,6 +34,8 @@ export function useDecideApproval() {
       queryClient.invalidateQueries({ queryKey: ["regulatory"] });
       queryClient.invalidateQueries({ queryKey: ["investment-options"] });
       queryClient.invalidateQueries({ queryKey: ["categories"] });
+      queryClient.invalidateQueries({ queryKey: ["setup"] });
+      queryClient.invalidateQueries({ queryKey: ["reference"] });
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });

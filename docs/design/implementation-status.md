@@ -170,3 +170,17 @@ final-salary months). `services/categories.py`, approval kind `benefit_category`
 API: `GET|POST /schemes/{id}/categories`, `GET|PUT /categories/{id}`. Frontend: employer tab "Benefit
 categories", category page (terms in force, scheduled, history) and create/change form with terms editor
 (vesting steps, DB formula section for DB funds). Seed: MGT/STF (CTE01), ALL (NBL01), STF (LSC01), TCH (MET01, DB).
+
+### Setup lists: account & transaction types, reference data (FR-CFG-005, 006, 010) — 2026-11-01
+
+Migration `c3f9a7d25e81`: `account_type`, `transaction_type`, `district`, `traditional_authority`,
+`village`, `country`, `reference_item` (relationships / ID types / permit types / salutations), plus the
+existing `bank` / `bank_branch`. **`services/system_lists.py`** registers each list once (`SystemList`:
+model, `Field`s, unique keys, parent filter, fixed columns, validate / after-apply hooks); every list gets
+approval kind `list_<name>` (scheme setup checker), case-insensitive uniqueness incl. pending requests,
+fields that lock once set, and retire-not-delete via `active`. `describe()` serves the field metadata.
+Transaction types: code/effect fixed; reversal must exist with the opposite effect and is paired both
+ways on approval; pairing can't change. API: `GET /setup/lists`, `GET /setup/lists/{name}?parent=`,
+`POST /setup/lists/{name}`, `PUT /setup/lists/{name}/{id}`. Frontend: sidebar "Setup" — one generic page
+(group menu / phone select, parent filter, search, table, form dialog built from the metadata).
+Country data: `app/data/countries.py` (generated from the Windows region database).

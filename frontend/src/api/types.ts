@@ -498,3 +498,36 @@ export interface BenefitCategory {
   history: CategoryTerms[];
   pending_approval_id: string | null;
 }
+
+// ---- Setup lists (FR-CFG-005, 006, 010) — described by the backend, rendered generically
+
+export type ListFieldType = "text" | "number" | "boolean" | "select" | "ref";
+
+export interface ListField {
+  name: string;
+  label: string;
+  type: ListFieldType;
+  required: boolean;
+  max_length: number | null;
+  minimum: number | null;
+  maximum: number | null;
+  options: { value: string; label: string }[];
+  ref: string | null;
+  help: string | null;
+  locked_on_edit: boolean;
+  upper: boolean;
+  default: unknown;
+  column: boolean;
+}
+
+export interface SystemListSpec {
+  name: string;
+  label: string;
+  plural: string;
+  group: string;
+  description: string;
+  parent_field: string | null;
+  fields: ListField[];
+}
+
+export type ListRow = Record<string, unknown> & { id: string; pending_approval_id: string | null };

@@ -115,8 +115,9 @@ Open — the default in *italics* is what we build to until answered (from REQUI
         create/edit form; Approvals diff now shows only changed fields. Screenshots at 1440 + 390 viewed.
   - [x] Tests: `tests/test_funds.py` (17) + `DiffView.test.tsx`; API smoke 17/17 incl. 401/403/404/
         409/422; seed has four invented funds.
-- [ ] Bank & branch codes / SWIFT codes for the seeded banks (needs a confirmed list) and a
-      reference-data maintenance screen. FR-CFG-010
+- [ ] Bank & branch codes / SWIFT codes for the seeded banks (needs a confirmed list). FR-CFG-010
+      — maintenance screen done 2026-11-01 (Setup → Banks / Bank branches); the codes themselves still
+      need a confirmed list from the banks or finance.
 - [x] Processing month per fund: open period, close with checklist stub, re-open with approval;
       `periods.require_open`. FR-CFG-002 — done 2026-11-01, see `services/periods.py`,
       `routes/staff/funds/FundPeriodsTab.tsx`, migration `d81f6b2c9a40`. Finance opens/closes; re-open of
@@ -135,8 +136,12 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       retirement band; DC needs an active default option of the fund, DB needs 1/N accrual + final-salary
       months; group life multiple; raising a regulatory minimum lists categories that would fall below.
       pytest 9 new, smoke 12/12, screenshots viewed.
-- [ ] Account types (Pension Fund, Member, Company, Reserve, Share) and transaction types
-      (codes 1–6 with effect + paired reversal + GL mapping). FR-CFG-005, FR-CFG-006
+- [x] Account types (Pension Fund, Member, Company, Reserve, Share) and transaction types
+      (codes 1–6 with effect + paired reversal + GL mapping). FR-CFG-005, FR-CFG-006 — done 2026-11-01,
+      Setup → Ledger (generic `services/system_lists.py`, migration `c3f9a7d25e81`). Seeded from the legacy
+      list; GL codes from the *proposed* chart (confirm in Phase 4); code/effect fixed, reversal pairs
+      kept both ways with opposite effects. Legacy extra codes (2 Contributions Received, 7, 14, 68 —
+      `docs/legacy/PFS-analysis.md`) clash with code 2 → resolve during migration mapping (Phase 11).
 - [x] Investment options: declared-rate pools (unit-priced placeholder). FR-CFG-007 — done 2026-11-01,
       see `services/investment_options.py`, `routes/staff/funds/FundOptionsTab.tsx`, migration `a93e1f5b7c28`.
       Uses the new shared per-fund maker-checker `services/config_changes.FundConfig` (kind
@@ -150,8 +155,12 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       flagged; no figures in migrations (dev seed only). Category-rate validation itself lands with
       benefit categories (next item uses `config_resolver.regulatory`). pytest 9 new, smoke 15/15,
       screenshots viewed.
-- [ ] Reference data: banks/branches, districts/TAs/villages, countries/nationalities, relationships,
-      ID & permit types, salutations. FR-CFG-010
+- [x] Reference data: banks/branches, districts/TAs/villages, countries/nationalities, relationships,
+      ID & permit types, salutations. FR-CFG-010 — done 2026-11-01, Setup screen (one metadata-driven
+      maker-checker for all lists, `routes/staff/setup/SetupPage.tsx`). Seeded: 28 districts, 245 ISO
+      countries (nationality = country), permit types from FR-ONB-I08, relationships/ID types/salutations.
+      TAs and villages are entered in Setup (no reliable source list). pytest 8 new, smoke 12/12,
+      screenshots viewed.
 - [ ] Config diff view + effective dates on approval. FR-CFG-011
 
 ## Phase 2 — Onboarding & KYC (FR-ONB)
