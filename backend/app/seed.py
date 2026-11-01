@@ -19,6 +19,7 @@ from app.models.identity import STAFF_ROLES, UserRole
 from app.models.mixins import utcnow
 from app.models.period import FundPeriod, PeriodStatus
 from app.models.category import BenefitCategory, BenefitCategoryTerms, BenefitDesign
+from app.models.fee import FeeBasis, FeeFrequency, FeePayer, FeeRule, FeeType
 from app.models.investment import InvestmentOption, PricingMethod
 from app.models.reference import Bank
 from app.models.regulatory import RegulatoryParameterVersion, TaxBand, TaxTable, TaxTableKind
@@ -183,6 +184,25 @@ def seed_categories(db) -> None:
         ))
 
 
+def seed_fees(db) -> None:
+    """Illustrative (invented) fees for UMB01: a fund-wide admin fee on contributions, a negotiated
+    rate for CTE01, and an investment management fee on assets."""
+    fund = db.execute(select(Fund).where(Fund.code == "UMB01")).scalar_one()
+    if db.execute(select(FeeRule.id).where(FeeRule.fund_id == fund.id)).first():
+        return
+    cte = db.execute(select(Scheme).where(Scheme.code == "CTE01")).scalar_one()
+    start = date(2024, 1, 1)
+    db.add_all([
+        FeeRule(fund_id=fund.id, code="ADM", name="Administration fee", fee_type=FeeType.administration, basis=FeeBasis.pct_contributions,
+                rate=Decimal("1.5"), payer=FeePayer.member, frequency=FeeFrequency.per_contribution, effective_from=start),
+        FeeRule(fund_id=fund.id, scheme_id=cte.id, code="ADM-CTE", name="Administration fee (negotiated)", fee_type=FeeType.administration,
+                basis=FeeBasis.pct_contributions, rate=Decimal("1.25"), payer=FeePayer.employer, frequency=FeeFrequency.per_contribution,
+                effective_from=start),
+        FeeRule(fund_id=fund.id, code="IMF", name="Investment management fee", fee_type=FeeType.investment_management,
+                basis=FeeBasis.pct_assets, rate=Decimal("0.75"), payer=FeePayer.fund, frequency=FeeFrequency.monthly, effective_from=start),
+    ])
+
+
 # Working defaults until confirmed (TASKS.md → Open decisions → "Regulatory figures").
 REGULATORY_DEFAULTS = {
     "min_employee_contribution_pct": "5", "min_employer_contribution_pct": "10", "max_lump_sum_pct": "50",
@@ -226,6 +246,7 @@ def main() -> None:
         seed_regulatory(db)
         seed_options(db)
         seed_categories(db)
+        seed_fees(db)
         db.commit()
     print(f"Seed complete: {created} user(s), {funds} fund(s) created (password for all: {DEV_PASSWORD}).")
 

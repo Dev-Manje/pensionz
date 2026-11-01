@@ -184,3 +184,15 @@ ways on approval; pairing can't change. API: `GET /setup/lists`, `GET /setup/lis
 `POST /setup/lists/{name}`, `PUT /setup/lists/{name}/{id}`. Frontend: sidebar "Setup" — one generic page
 (group menu / phone select, parent filter, search, table, form dialog built from the metadata).
 Country data: `app/data/countries.py` (generated from the Windows region database).
+
+### Fee rules (FR-CFG-008) — 2026-11-01
+
+Migration `d4a8b2c61f93`: `fee_rule` (fund, optional scheme, code unique per fund, fee type, basis
+pct_contributions / pct_assets (per year) / flat_per_member, rate, payer fund / employer / member,
+frequency per_contribution / monthly / quarterly / annually, effective_from / optional effective_to).
+`services/fee_rules.py` on `FundConfig` (kind `fee_rule`; `FundConfig` gained a `readable` hook so the
+checker sees "CTE01 — …" / "Whole fund"). Rules: % of contributions ⇔ per contribution; % of assets ≤ 10%
+a year; employer must belong to the fund; same type + scope may not overlap in time.
+`rules_in_force(db, fund_id, scheme_id, as_of)`: an employer's own rule replaces the fund-wide rule of the
+same type. Frontend: fund tab "Fees" (table + dialog). Seed (invented): UMB01 ADM 1.5% (member),
+ADM-CTE 1.25% (employer, CTE01), IMF 0.75% p.a. of assets (fund).

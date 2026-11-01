@@ -531,3 +531,50 @@ export interface SystemListSpec {
 }
 
 export type ListRow = Record<string, unknown> & { id: string; pending_approval_id: string | null };
+
+// ---- Fee rules (FR-CFG-008)
+
+export type FeeType = "administration" | "investment_management" | "risk_premium" | "statutory_levy" | "other";
+export type FeeBasis = "pct_contributions" | "pct_assets" | "flat_per_member";
+export type FeePayer = "fund" | "employer" | "member";
+export type FeeFrequency = "per_contribution" | "monthly" | "quarterly" | "annually";
+
+export const FEE_TYPE_LABELS: Record<FeeType, string> = {
+  administration: "Administration",
+  investment_management: "Investment management",
+  risk_premium: "Risk premium",
+  statutory_levy: "Statutory levy",
+  other: "Other",
+};
+export const FEE_BASIS_LABELS: Record<FeeBasis, string> = {
+  pct_contributions: "% of contributions",
+  pct_assets: "% of assets a year",
+  flat_per_member: "Flat amount per member",
+};
+export const FEE_PAYER_LABELS: Record<FeePayer, string> = { fund: "The fund", employer: "The employer", member: "The member" };
+export const FEE_FREQUENCY_LABELS: Record<FeeFrequency, string> = {
+  per_contribution: "On each contribution",
+  monthly: "Monthly",
+  quarterly: "Quarterly",
+  annually: "Annually",
+};
+
+export interface FeeRuleInput {
+  code: string;
+  name: string;
+  scheme_id: string | null;
+  fee_type: FeeType;
+  basis: FeeBasis;
+  rate: string;
+  payer: FeePayer;
+  frequency: FeeFrequency;
+  effective_from: string;
+  effective_to: string | null;
+}
+
+export interface FeeRule extends FeeRuleInput {
+  id: string;
+  fund_id: string;
+  employer: string | null;
+  pending_approval_id: string | null;
+}

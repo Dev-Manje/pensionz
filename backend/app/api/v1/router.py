@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import approvals, auth, categories, funds, investment_options, notifications, periods, reference, regulatory, schemes, setup, users
+from app.api.v1 import approvals, auth, categories, fee_rules, funds, investment_options, notifications, periods, reference, regulatory, schemes, setup, users
 
 api_router = APIRouter()
 api_router.include_router(auth.router)
@@ -14,4 +14,5 @@ api_router.include_router(regulatory.router)
 api_router.include_router(investment_options.router)
 api_router.include_router(categories.router)
 api_router.include_router(setup.router)
+api_router.include_router(fee_rules.router)
 api_router.include_router(reference.router)

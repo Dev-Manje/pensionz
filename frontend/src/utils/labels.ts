@@ -21,6 +21,7 @@ export const STATUS_LABELS: Record<string, string> = {
   scheduled: "Scheduled",
   not_set: "Not set",
   retired: "Retired",
+  ended: "Ended",
   change_pending: "Change awaiting approval",
   // processing months
   open: "Open",
@@ -56,6 +57,7 @@ const TONES: Record<string, StatusTone> = {
   scheduled: "info",
   not_set: "warning",
   retired: "default",
+  ended: "default",
   change_pending: "warning",
   open: "success",
   closed: "default",

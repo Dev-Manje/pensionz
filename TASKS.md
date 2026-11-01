@@ -147,7 +147,11 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       Uses the new shared per-fund maker-checker `services/config_changes.FundConfig` (kind
       `investment_option`); pricing method fixed once set; none for DB funds. pytest 5 new, smoke 9/9,
       screenshots viewed.
-- [ ] Fee rules. FR-CFG-008
+- [x] Fee rules. FR-CFG-008 — done 2026-11-01, see `services/fee_rules.py`, `routes/staff/funds/FundFeesTab.tsx`,
+      migration `d4a8b2c61f93`. Fee type, basis (% contributions / % assets p.a. / flat per member), rate, payer,
+      frequency, dates; whole fund or one employer (employer rule overrides — `rules_in_force`); no overlaps for
+      the same type and scope. Charging/posting comes with the ledger (Phase 4). pytest 5 new, smoke 7/7,
+      screenshots viewed.
 - [x] Regulatory parameters & tax tables (effective-dated) with validation of category rates. FR-CFG-009
       — done 2026-11-01, see `services/regulatory.py`, `services/config_resolver.py`,
       `routes/staff/regulatory/`, migration `f2b8d4e61c07`. Ten parameters + PAYE/lump-sum tax tables as
@@ -161,7 +165,10 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       countries (nationality = country), permit types from FR-ONB-I08, relationships/ID types/salutations.
       TAs and villages are entered in Setup (no reliable source list). pytest 8 new, smoke 12/12,
       screenshots viewed.
-- [ ] Config diff view + effective dates on approval. FR-CFG-011
+- [x] Config diff view + effective dates on approval. FR-CFG-011 — done 2026-11-01 across Phase 1: every
+      configuration change is an approval whose diff shows only changed fields in readable form; rates and
+      rules are effective-dated (regulatory parameters, tax tables, category terms, fee rules); identity/contact
+      records (fund, employer, options, Setup lists) take effect on approval.
 
 ## Phase 2 — Onboarding & KYC (FR-ONB)
 
@@ -305,3 +312,9 @@ Open — the default in *italics* is what we build to until answered (from REQUI
   Funds screens, fund picker in Users). pytest 43/43, vitest 33/33, tsc clean, API smoke 17/17,
   screenshots of list/detail/tabs/form/approval diff/users at 1440 + 390 viewed, no JS exceptions.
   Next: processing month per fund (FR-CFG-002).
+- 2026-11-01 — **Phase 1 built and verified** (all items ticked except bank/branch/SWIFT code *data*): fund
+  setup + fund scoping, processing months, employers + principal officers, regulatory parameters & tax
+  tables, investment options, benefit categories (effective-dated terms), Setup lists (account &
+  transaction types, banks, places, pick-lists), fee rules. Shared mechanisms: `FundConfig` (per-fund
+  records) and `SystemList` (metadata-driven Setup). pytest 98/98, vitest 33/33, tsc clean, every screen
+  screenshotted at 1440 + 390. Commits on branch `phase-1-setup`. Next: Phase 2 onboarding & KYC.

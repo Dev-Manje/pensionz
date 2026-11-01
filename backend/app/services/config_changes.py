@@ -34,6 +34,8 @@ class FundConfig:
     converters: dict[str, Callable[[Any], Any]] = field(default_factory=dict)
     # extra checks: (db, fund, values, existing row or None) → raise HTTPException
     validate: Callable[[Session, Fund, dict, Any], None] | None = None
+    # extra lines for the checker (e.g. an employer's name for its id): (db, values) → dict
+    readable: Callable[[Session, dict], dict] | None = None
 
     def __post_init__(self):
         approvals.register(approvals.ApprovalKind(
@@ -62,6 +64,9 @@ class FundConfig:
         return row
 
     # ---- proposing
+
+    def _extra(self, db: Session, values: dict) -> dict:
+        return audit._jsonable(self.readable(db, values)) if self.readable else {}
 
     def _values(self, data: dict) -> dict:
         values = {f: data.get(f) for f in self.fields}
@@ -95,7 +100,7 @@ class FundConfig:
         request = approvals.submit(
             db, maker, self.kind, entity_type=self.model.__tablename__, entity_id=None,
             summary=f"New {self.label.lower()} {values['code']} — {data.get('name', '')} in fund {fund.code}",
-            payload={"action": "create", "fund_id": str(fund.id), **audit._jsonable(data)},
+            payload={"action": "create", "fund_id": str(fund.id), **audit._jsonable(data), **self._extra(db, values)},
             fund_id=fund.id,
         )
         db.commit()
@@ -116,8 +121,8 @@ class FundConfig:
         request = approvals.submit(
             db, maker, self.kind, entity_type=self.model.__tablename__, entity_id=row.id,
             summary=f"Change {self.label.lower()} {row.code} in fund {fund.code}: {', '.join(k.replace('_', ' ') for k in changed)}"[:300],
-            payload={"action": "update", **proposed},
-            previous=current,
+            payload={"action": "update", **proposed, **self._extra(db, values)},
+            previous={**current, **self._extra(db, self._values(current))},
             fund_id=fund.id,
         )
         db.commit()

@@ -30,12 +30,20 @@ import { statusLabel } from "../../../utils/labels";
 import {
   BANK_PURPOSE_LABELS,
   BILLING_FREQUENCY_LABELS,
+  FEE_BASIS_LABELS,
+  FEE_FREQUENCY_LABELS,
+  FEE_PAYER_LABELS,
+  FEE_TYPE_LABELS,
   FUND_TYPE_LABELS,
   PRICING_METHOD_LABELS,
   ROLE_LABELS,
   type Approval,
   type BankAccountPurpose,
   type BillingFrequency,
+  type FeeBasis,
+  type FeeFrequency,
+  type FeePayer,
+  type FeeType,
   type FundType,
   type PricingMethod,
   type UserRole,
@@ -69,9 +77,14 @@ function formatValue(key: string, value: unknown): string {
   if (key === "fund_type") return FUND_TYPE_LABELS[value as FundType] ?? String(value);
   if (key === "financial_year_end_month") return MONTH_NAMES[Number(value) - 1] ?? String(value);
   if (key === "contribution_day") return dueDayLabel(Number(value));
+  if (key === "rate" && !Number.isNaN(Number(value))) return String(Number(value)); // stored to 6 dp
+  if (key === "fee_type") return FEE_TYPE_LABELS[value as FeeType] ?? String(value);
+  if (key === "basis") return FEE_BASIS_LABELS[value as FeeBasis] ?? String(value);
+  if (key === "payer") return FEE_PAYER_LABELS[value as FeePayer] ?? String(value);
+  if (key === "frequency") return FEE_FREQUENCY_LABELS[value as FeeFrequency] ?? String(value);
   if (key === "pricing_method") return PRICING_METHOD_LABELS[value as PricingMethod] ?? String(value);
   if (key === "billing_frequency") return BILLING_FREQUENCY_LABELS[value as BillingFrequency] ?? String(value);
-  if ((key.endsWith("_date") || key === "effective_from") && typeof value === "string") return formatDate(value);
+  if ((key.endsWith("_date") || key === "effective_from" || key === "effective_to") && typeof value === "string") return formatDate(value);
   if (key === "status") return statusLabel(String(value));
   if (Array.isArray(value)) {
     if (value.length === 0) return "—";
@@ -113,7 +126,7 @@ function ApprovalDialog({ approval, onClose }: { approval: Approval; onClose: ()
           <Typography variant="body2" color="text.secondary">
             Requested by {approval.initiated_by} on {formatDateTime(approval.created_at)}
           </Typography>
-          <DiffView after={approval.payload} before={approval.previous} hide={["action", "fund_id"]} format={formatValue} />
+          <DiffView after={approval.payload} before={approval.previous} hide={["action", "fund_id", "scheme_id"]} format={formatValue} />
           {approval.status !== "pending" && (
             <Alert severity={approval.status === "approved" ? "success" : "info"}>
               {approval.status === "cancelled" ? "Withdrawn by the requester" : `${approval.status === "approved" ? "Approved" : "Rejected"} by ${approval.reviewed_by ?? "—"}`}
