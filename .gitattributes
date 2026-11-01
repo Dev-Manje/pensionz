@@ -1,0 +1,7 @@
+# Code runs in Linux containers via bind mounts: keep LF everywhere.
+* text=auto eol=lf
+*.docx binary
+*.pdf binary
+*.png binary
+*.xlsx binary
+*.bat text eol=crlf

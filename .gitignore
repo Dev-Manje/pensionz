@@ -1,0 +1,36 @@
+# Secrets — copy .env.example to .env
+.env
+.env.*
+!.env.example
+
+# Legacy source documents with real member data — reference only, kept on disk, never committed
+ipf_member_stat_VOL-1.pdf
+PFS.docx
+Pension Funds.docx
+
+# Dependencies / build output
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+# Local wheelhouse for offline Docker builds (keep the folder: the Dockerfile COPYs it)
+backend/wheels/*
+!backend/wheels/.gitkeep
+
+# Headless-Chrome profiles from screenshot verification
+.chrome-profile-tmp*/
+
+# Local Claude Code settings (shared settings.json and skills are committed)
+.claude/settings.local.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

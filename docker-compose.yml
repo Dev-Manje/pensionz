@@ -1,0 +1,111 @@
+# Pensionz dev stack. Host ports differ from the Money Market stack
+# (5177/8001/8025/5432/9000) so both can run side by side.
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pensionz}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pensionz_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-pensionz}
+    ports:
+      - "5433:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pensionz}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-pensionz}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-pensionz_dev_password}
+    ports:
+      - "9002:9000"
+      - "9003:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Dev mail catcher: web UI http://localhost:8026, SMTP mailpit:1025 inside the network.
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "8026:8025"
+      - "1026:1025"
+
+  backend:
+    build:
+      context: ./backend
+    image: pensionz-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://pensionz:pensionz_dev_password@db:5432/pensionz}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-false}
+    ports:
+      - "8002:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Same image as backend; runs scheduled jobs and delivers the notification outbox.
+  worker:
+    image: pensionz-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://pensionz:pensionz_dev_password@db:5432/pensionz}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-false}
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    command: python -m app.worker
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8002/api/v1}
+    ports:
+      - "5178:5178"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    command: npm run dev -- --host 0.0.0.0
+
+volumes:
+  db_data:
+  minio_data:
