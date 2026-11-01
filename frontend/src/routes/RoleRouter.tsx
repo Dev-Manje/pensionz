@@ -26,6 +26,7 @@ import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
 import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlined";
 import GavelOutlinedIcon from "@mui/icons-material/GavelOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
+import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
 import { useAuth } from "../auth/AuthContext";
 import { RouteErrorBoundary } from "../components/RouteErrorBoundary";
 import { NotificationBell } from "../components/notifications/NotificationBell";
@@ -38,6 +39,7 @@ import { UsersPage } from "./staff/admin/UsersPage";
 import { FundsPage } from "./staff/funds/FundsPage";
 import { RegulatoryPage } from "./staff/regulatory/RegulatoryPage";
 import { SetupPage } from "./staff/setup/SetupPage";
+import { KycPage } from "./staff/kyc/KycPage";
 import { MemberHome } from "./member/MemberHome";
 import { PoHome } from "./po/PoHome";
 import { ROLE_LABELS, STAFF_ROLES } from "../api/types";
@@ -69,6 +71,7 @@ const SECTIONS: Section[] = [
   { path: "po", label: "My schemes", icon: <BusinessOutlinedIcon />, roles: ["principal_officer"], element: <PoHome /> },
   { path: "home", label: "Home", icon: <HomeOutlinedIcon />, roles: STAFF_ROLES, element: <StaffHome /> },
   { path: "approvals", label: "Approvals", icon: <CheckCircleOutlineIcon />, roles: STAFF_ROLES, element: <ApprovalsPage /> },
+  { path: "kyc", label: "KYC", icon: <FactCheckOutlinedIcon />, roles: ["compliance", "relationship_manager", "member_admin", "admin", "auditor"], element: <KycPage /> },
   { path: "funds", label: "Funds", icon: <AccountBalanceOutlinedIcon />, roles: STAFF_ROLES, element: <FundsPage /> },
   { path: "regulatory", label: "Regulatory", icon: <GavelOutlinedIcon />, roles: STAFF_ROLES, element: <RegulatoryPage /> },
   { path: "setup", label: "Setup", icon: <SettingsOutlinedIcon />, roles: STAFF_ROLES, element: <SetupPage /> },

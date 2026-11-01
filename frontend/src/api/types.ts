@@ -578,3 +578,106 @@ export interface FeeRule extends FeeRuleInput {
   employer: string | null;
   pending_approval_id: string | null;
 }
+
+// ---- KYC onboarding (FR-ONB)
+
+export type ClientType = "corporate" | "group" | "individual";
+export type KycStatus = "draft" | "submitted" | "in_review" | "returned" | "awaiting_senior_approval" | "approved" | "rejected";
+export type RiskRating = "low" | "medium" | "high";
+
+export const CLIENT_TYPE_LABELS: Record<ClientType, string> = {
+  corporate: "Corporate (registered organisation)",
+  group: "Group (unregistered collective)",
+  individual: "Individual",
+};
+
+export interface KycDocument {
+  id: string;
+  requirement: string;
+  doc_type: string;
+  doc_type_label: string;
+  doc_type_other: string | null;
+  issue_date: string | null;
+  expiry_date: string | null;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  uploaded_at: string;
+  uploaded_by: string | null;
+  review_status: "pending" | "accepted" | "rejected";
+  review_reason: string | null;
+  reviewed_by: string | null;
+}
+
+export interface KycSlot {
+  key: string;
+  label: string;
+  person: string | null;
+  types: { code: string; label: string; max_age_months: number | null }[];
+  issue_date: boolean;
+  expiry_date: boolean;
+  document: KycDocument | null;
+  problems: string[];
+}
+
+export interface PartyRef {
+  id: string;
+  name: string;
+  identifier: string | null;
+  risk_rating: RiskRating;
+  kyc_review_due: string;
+}
+
+export interface KycSummary {
+  id: string;
+  reference: string;
+  client_type: ClientType;
+  status: KycStatus;
+  display_name: string;
+  captured_by: string | null;
+  applicant: string | null;
+  submitted_at: string | null;
+  risk_rating: RiskRating | null;
+  edd_required: boolean;
+  reviewer: string | null;
+  updated_at: string;
+}
+
+export interface KycApplication extends KycSummary {
+  data: Record<string, unknown>;
+  risk_reasons: string[];
+  review_note: string | null;
+  recommended_by: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_reason: string | null;
+  declaration_accepted_by: string | null;
+  declaration_accepted_at: string | null;
+  declaration_version: number | null;
+  party: PartyRef | null;
+  slots: KycSlot[];
+  problems: string[];
+  possible_duplicates: PartyRef[];
+  can_edit: boolean;
+  can_start_review: boolean;
+  can_review: boolean;
+  can_senior_decide: boolean;
+}
+
+export interface KycOptions {
+  entity_forms: { value: string; label: string }[];
+  group_kinds: { value: string; label: string }[];
+  marital_statuses: { value: string; label: string }[];
+  contact_modes: { value: string; label: string }[];
+  genders: { value: string; label: string }[];
+  income_sources: { value: string; label: string }[];
+  pep_definition: string;
+}
+
+export interface Declaration {
+  id: string;
+  client_type: ClientType;
+  version: number;
+  title: string;
+  body: string;
+}

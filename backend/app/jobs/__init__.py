@@ -12,7 +12,7 @@ from typing import Callable
 
 from sqlalchemy.orm import Session
 
-from app.jobs import purge_expired_links
+from app.jobs import kyc_expiry_reminders, purge_expired_links
 
 
 @dataclass(frozen=True)
@@ -29,5 +29,6 @@ JOBS: dict[str, Job] = {
     job.name: job
     for job in [
         Job("purge_expired_links", purge_expired_links.run, time(1, 0), catch_up=False),
+        Job("kyc_expiry_reminders", kyc_expiry_reminders.run, time(7, 0), catch_up=False),
     ]
 }

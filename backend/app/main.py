@@ -1,17 +1,30 @@
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.v1.router import api_router
+from app.core import storage
 from app.core.config import settings
 from app.core.logging import setup_logging
 
 setup_logging()
 logger = logging.getLogger("app")
 
-app = FastAPI(title="Pensionz API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    # Documents (KYC evidence, later statements) go to this bucket; create it on first start.
+    try:
+        storage.ensure_bucket()
+    except Exception:  # noqa: BLE001 - the API can still serve everything but uploads
+        logger.warning("Document storage isn't reachable at %s; uploads will fail until it is", settings.minio_endpoint)
+    yield
+
+
+app = FastAPI(title="Pensionz API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

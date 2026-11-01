@@ -5,6 +5,9 @@ import { ForgotPasswordPage } from "./auth/ForgotPasswordPage";
 import { ResetPasswordPage } from "./auth/ResetPasswordPage";
 import { RoleRouter } from "./routes/RoleRouter";
 import { LoadingState } from "./components/LoadingState";
+import { AuthLayout } from "./auth/AuthLayout";
+import Alert from "@mui/material/Alert";
+import Button from "@mui/material/Button";
 
 // Where to send the user after signing in: the page they were trying to
 // open (passed as ?next=), never an external URL.
@@ -31,8 +34,24 @@ function RequireAuth() {
 }
 
 function Shell() {
-  const { loading } = useAuth();
+  const { loading, unreachable, retry } = useAuth();
   if (loading) return <LoadingState />;
+  if (unreachable) {
+    return (
+      <AuthLayout>
+        <Alert
+          severity="warning"
+          action={
+            <Button color="inherit" size="small" onClick={retry}>
+              Try again
+            </Button>
+          }
+        >
+          We can't reach the server right now. Check your connection — you're still signed in.
+        </Alert>
+      </AuthLayout>
+    );
+  }
   return (
     <Routes>
       <Route path="/login" element={<LoginRoute />} />

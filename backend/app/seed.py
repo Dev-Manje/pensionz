@@ -208,6 +208,7 @@ REGULATORY_DEFAULTS = {
     "min_employee_contribution_pct": "5", "min_employer_contribution_pct": "10", "max_lump_sum_pct": "50",
     "min_retirement_age": "50", "max_retirement_age": "70", "unemployment_access_wait_months": "3",
     "pre_retirement_access_years": "5", "pre_retirement_access_max_pct": "50",
+    "kyc_review_years_high": "1", "kyc_review_years_medium": "2", "kyc_review_years_low": "3",
 }
 REGULATORY_FROM = date(2023, 1, 1)
 # Monthly PAYE bands as understood for 2024 — TO CONFIRM with MRA before any real use.

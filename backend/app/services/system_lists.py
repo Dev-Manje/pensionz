@@ -212,6 +212,7 @@ for _key, _label, _plural, _desc in (
     (ReferenceList.id_type, "ID type", "ID types", "Identity documents accepted for KYC."),
     (ReferenceList.permit_type, "Permit type", "Permit types", "Immigration permits held by foreign nationals."),
     (ReferenceList.salutation, "Salutation", "Salutations", "Titles used in letters and statements."),
+    (ReferenceList.kyc_product, "KYC product", "KYC products", "Products and schemes an applicant can tick on the KYC form."),
 ):
     register(SystemList(
         f"{_key.value}s", _label, _plural, "People", _desc, ReferenceItem,

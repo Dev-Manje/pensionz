@@ -55,6 +55,12 @@ PARAMETERS: dict[str, Parameter] = {p.key: p for p in [
               "Months a member must be without work before they may access their savings.", "Early access"),
     Parameter("pre_retirement_access_years", "Pre-retirement access window", "years", _P(0), _P(20),
               "Years before normal retirement age in which early access is allowed.", "Early access"),
+    Parameter("kyc_review_years_high", "KYC review — high risk", "years", _P(1), _P(10),
+              "How often a high-risk client's KYC is reviewed.", "KYC"),
+    Parameter("kyc_review_years_medium", "KYC review — medium risk", "years", _P(1), _P(10),
+              "How often a medium-risk client's KYC is reviewed.", "KYC"),
+    Parameter("kyc_review_years_low", "KYC review — low risk", "years", _P(1), _P(10),
+              "How often a low-risk client's KYC is reviewed.", "KYC"),
     Parameter("pre_retirement_access_max_pct", "Pre-retirement access limit", "percent", _P(0), _P(100),
               "Largest share of the balance that may be accessed within that window.", "Early access"),
 ]}

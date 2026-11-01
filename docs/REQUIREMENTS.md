@@ -380,7 +380,11 @@ User/Role/FundAccess · AuditEvent · Notification/Outbox · MigrationBatch.
 6. **"Share" account type** — what is it used for?
 7. **KYC 1–4 tabs** in the legacy member screen: which fields are on each?
 8. **Individual KYC items 28–32** (Monthly Income1, Name, Relationship, Occupation, Cell
-   Number): are these next of kin, a third-party funder, or a beneficiary?
+   Number): are these next of kin, a third-party funder, or a beneficiary? *Built as next of kin (default) on 2026-11-02.*
+16. **KYC policy:** review periods by risk (dev default high 1 / medium 2 / low 3 years), the risk rules
+    (any PEP ⇒ high; unregistered group, foreign national, business income ⇒ medium), who gives senior
+    approval for high risk (built: an administrator), the declaration wording (neutral v1 seeded), and the
+    sanctions/PEP screening provider (FR-ONB-102, not built).
 9. **Regulatory figures** to confirm: minimum contribution rates, lump-sum maximum (50%),
    unemployment wait (3 months), pre-retirement access (50% within 5 years), small-balance
    threshold, late-payment interest, vesting minimums, tax on benefits. *Built 2026-11-01 as

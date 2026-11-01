@@ -87,3 +87,41 @@ def notify_approval_decided(db: Session, maker: User, summary: str, approved: bo
     body = f"{summary} — {outcome}." + (f" Comment: {comment}" if comment else "")
     _notify(db, maker, f"approval.{outcome}", f"Request {outcome}", body,
             link=f"/approvals/{request_id}", entity_type="approval_request", entity_id=request_id)
+
+
+# --- KYC ----------------------------------------------------------------------
+
+def notify_kyc_submitted(db: Session, reviewers: list[User], reference: str, name: str, application_id: uuid.UUID) -> None:
+    for reviewer in reviewers:
+        _notify(db, reviewer, "kyc.submitted", "KYC application to review", f"{reference} — {name} was submitted for review.",
+                link=f"/kyc/{application_id}", entity_type="kyc_application", entity_id=application_id)
+
+
+def notify_kyc_returned(db: Session, user: User, reference: str, note: str, application_id: uuid.UUID) -> None:
+    _notify(db, user, "kyc.returned", "Your KYC application needs changes",
+            f"{reference} was sent back: {note} Please update it and submit again.",
+            link=f"/kyc/{application_id}", entity_type="kyc_application", entity_id=application_id)
+
+
+def notify_kyc_senior_approval(db: Session, approvers: list[User], reference: str, name: str, application_id: uuid.UUID) -> None:
+    for approver in approvers:
+        _notify(db, approver, "kyc.senior_approval", "High-risk KYC needs your approval",
+                f"{reference} — {name} is rated high risk; compliance recommends approval after enhanced due diligence.",
+                link=f"/kyc/{application_id}", entity_type="kyc_application", entity_id=application_id)
+
+
+def notify_kyc_decided(db: Session, user: User, reference: str, approved: bool, reason: str | None, application_id: uuid.UUID) -> None:
+    outcome = "approved" if approved else "not approved"
+    _notify(db, user, f"kyc.{'approved' if approved else 'rejected'}", f"KYC application {outcome}",
+            f"{reference} was {outcome}." + (f" Reason: {reason}" if reason else ""),
+            link=f"/kyc/{application_id}", entity_type="kyc_application", entity_id=application_id)
+
+
+def notify_kyc_expiring_digest(db: Session, staff: list[User], lines: list[str]) -> None:
+    for user in staff:
+        _notify(db, user, "kyc.expiring", f"KYC: {len(lines)} item(s) need attention", "\n".join(lines[:30]), link="/kyc?tab=expiring")
+
+
+def notify_kyc_document_expiring(db: Session, user: User, label: str, when: str) -> None:
+    _notify(db, user, "kyc.document_expiring", "Please update your document",
+            f"Your {label} expires {when}. Upload a current one so your records stay up to date.")

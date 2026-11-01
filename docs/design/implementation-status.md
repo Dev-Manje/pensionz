@@ -196,3 +196,33 @@ a year; employer must belong to the fund; same type + scope may not overlap in t
 `rules_in_force(db, fund_id, scheme_id, as_of)`: an employer's own rule replaces the fund-wide rule of the
 same type. Frontend: fund tab "Fees" (table + dialog). Seed (invented): UMB01 ADM 1.5% (member),
 ADM-CTE 1.25% (employer, CTE01), IMF 0.75% p.a. of assets (fund).
+
+## Phase 2 — Onboarding & KYC (FR-ONB) — 2026-11-02
+
+Migration `e7b3c9a14d52`: `declaration_version`, `party`, `kyc_application`, `kyc_document`, sequence
+`kyc_reference_seq`; KYC products seeded as Setup list `kyc_products`.
+- **Rules** (`services/kyc_forms.py`): document requirements per client type from the source form, with
+  per-person slots (`director_id:<i>`, `signatory_address:<i>`) and foreign-resident permits; required
+  fields and conditional checks; `problems()` lists everything still missing; `risk()` rates high for any
+  PEP (entity, director, signatory, self, related), medium for unregistered groups, foreign nationals and
+  business income — with reasons.
+- **Workflow** (`services/kyc.py`): staff capture (compliance, relationship manager, member admin) or portal
+  applicants (principal officer / individual) own drafts; submit needs zero problems and acceptance of the
+  current declaration version (name, time, IP stored); compliance (not the capturer) starts review, accepts or
+  rejects each document (reason required), returns (applicant fixes; resubmission goes back to the same
+  reviewer), rejects or approves (all documents accepted; risk override needs a note); high risk →
+  `awaiting_senior_approval` → an administrator who took no part decides. Approval creates/refreshes `party`
+  with `kyc_review_due` = today + `kyc_review_years_<rating>` (regulatory parameters, KYC group).
+- **Documents**: MinIO bucket created at API start-up (`app/main.py` lifespan); type sniffed from content,
+  10 MB max, re-upload supersedes; downloads stream through the API with an audit event per view.
+- **Expiry** (`services/kyc_expiry.py`, job `kyc_expiry_reminders` 07:00): reviews due and approved
+  ID/permit expiry within 31 days → reminders 30/7/0 days before and weekly when overdue; `GET /kyc/expiring`.
+- API `/api/v1/kyc/…`: options, declarations, applications (list/create/get/save), documents
+  (upload/remove/file), submit, start-review, document review, return, approve, reject, senior-decision,
+  expiring, parties.
+- Frontend: sidebar "KYC" (queue tabs: To review / Drafts & returned / Senior approval / Expiring / All),
+  capture dialog, one stepper for all client types driven by `routes/staff/kyc/kycSchema.ts`
+  (phone: step picker), document cards (upload / replace / view / accept / reject), declaration step with
+  the outstanding-items list, review page (risk, declaration, duplicates, answers, sticky actions).
+- Robustness fixes: `tzdata` pinned (zoneinfo had no Africa/Blantyre on Windows); the app keeps the session
+  and retries when the server is briefly unreachable instead of signing the user out.

@@ -129,6 +129,8 @@ class ReferenceList(str, enum.Enum):
     id_type = "id_type"
     permit_type = "permit_type"
     salutation = "salutation"
+    # Products / schemes a KYC applicant can tick (FR-ONB-003).
+    kyc_product = "kyc_product"
 
 
 class ReferenceItem(UUIDPKMixin, CreatedAtMixin, Base):

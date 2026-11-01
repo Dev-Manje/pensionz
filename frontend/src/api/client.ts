@@ -160,3 +160,18 @@ export async function downloadFile(path: string, filenameFallback: string): Prom
   a.remove();
   URL.revokeObjectURL(url);
 }
+
+// Opens a protected file (a KYC document, later statements) in a new tab:
+// fetched with the session's token, then shown from a temporary blob URL.
+export async function openFile(path: string): Promise<void> {
+  const viewer = window.open("", "_blank");
+  const response = await authorizedFetch(path);
+  if (!response.ok) {
+    viewer?.close();
+    throw await toApiError(response);
+  }
+  const url = URL.createObjectURL(await response.blob());
+  if (viewer) viewer.location.href = url;
+  else window.location.assign(url);
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}

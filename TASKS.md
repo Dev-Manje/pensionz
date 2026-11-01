@@ -50,6 +50,10 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       *store UPID/BI UPID as optional text fields; regulatory tab = free key/value fields until the
       field list is known; "Share" account type seeded but unused.*
 - [ ] **Individual KYC items 28–32** — *next of kin.*
+- [ ] **KYC review periods & risk rules** — *high risk every 1 year, medium 2, low 3 (effective-dated
+      parameters); high risk if any PEP (entity, director, signatory, self or related); medium for
+      unregistered groups, foreign nationals and business/cash income; EDD + second approval by an
+      administrator for high risk.* Sanctions screening provider still open (FR-ONB-102, not in Phase 2).
 - [ ] **Regulatory figures** — *EE 5% / ER 10% minimums, lump sum max 50%, retirement 50–70,
       unemployment access after 3 months, 50% access within 5 years of NRA; all editable
       effective-dated parameters.* — built 2026-11-01 (Regulatory screen); production values are
@@ -172,14 +176,31 @@ Open — the default in *italics* is what we build to until answered (from REQUI
 
 ## Phase 2 — Onboarding & KYC (FR-ONB)
 
-- [ ] Party model (corporate / group / individual), documents (MinIO, type, issue/expiry dates),
-      declarations with versioned text. FR-ONB-001…008
-- [ ] Corporate KYC form (stepper, draft/resume, uploads, directors repeatable, PEP). FR-ONB-C01…C09
-- [ ] Group KYC form (unlimited signatories with ID + proof of address each). FR-ONB-G01…G05
-- [ ] Individual KYC form. FR-ONB-I01…I13
-- [ ] Staff capture on behalf + compliance review queue (accept/reject per document, re-upload loop),
-      risk rating, EDD flag, approval → employer / member. FR-ONB-101, 103, 105
-- [ ] KYC expiry dates + reminders job. FR-ONB-104
+- [x] Party model (corporate / group / individual), documents (MinIO, type, issue/expiry dates),
+      declarations with versioned text. FR-ONB-001…008 — done 2026-11-02, see `services/kyc.py`,
+      `services/kyc_forms.py`, migration `e7b3c9a14d52`: `kyc_application` (draft → submitted → in review →
+      returned / awaiting senior approval → approved / rejected; reference KYC-YYYY-NNNNNN), `kyc_document`
+      in MinIO (sniffed PDF/JPEG/PNG/WebP ≤ 10 MB, re-upload supersedes, every view audit-logged),
+      `declaration_version` (neutral v1 per client type, acceptance stored with name/time/IP/version),
+      `party` on approval; product list = Setup list "KYC products" (neutral defaults).
+- [x] Corporate KYC form (stepper, draft/resume, uploads, directors repeatable, PEP). FR-ONB-C01…C09
+      — done 2026-11-02: one data-driven stepper (`routes/staff/kyc/kycSchema.ts`); document slots follow
+      the answers (ID per director, permit only for foreign residents); freshness checks (bills ≤ 3 months,
+      rates ≤ 12 months), expiry checks, "Other (type it)" on every list.
+- [x] Group KYC form (unlimited signatories with ID + proof of address each). FR-ONB-G01…G05 — done 2026-11-02.
+- [x] Individual KYC form. FR-ONB-I01…I13 — done 2026-11-02 (next of kin for items 28–32 per the default).
+- [x] Staff capture on behalf + compliance review queue (accept/reject per document, re-upload loop),
+      risk rating, EDD flag, approval → employer / member. FR-ONB-101, 103, 105 — done 2026-11-02 except the
+      employer/member link (see Phase 3 item below): capturer ≠ reviewer, reject needs a reason, return →
+      applicant re-uploads → back to the same reviewer; rule-based risk with reasons, override needs a note;
+      high risk → compliance recommends, an administrator who took no part approves. Staff-side duplicate
+      matching only (never shown to applicants). pytest 12 new, smoke 12/12 against real MinIO.
+- [x] KYC expiry dates + reminders job. FR-ONB-104 — done 2026-11-02: review due date from the risk rating
+      (regulatory parameters `kyc_review_years_*`), daily job `kyc_expiry_reminders` (07:00; 30/7/0 days,
+      weekly when overdue) → compliance digest + applicant notice for expiring documents; KYC tab "Expiring".
+- [ ] Portal KYC (principal officer for the organisation, individual self-service) — the API already lets
+      portal users own their drafts; screens come with Phases 5 and 7. Portal users also need read access to
+      the reference lists the form uses (currently staff-only `/setup/lists`).
 
 ## Phase 3 — Membership (FR-MEM)
 
@@ -193,6 +214,8 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       import) + printable new-member application form. FR-MEM-006, FR-MEM-007
 - [ ] Category moves, employer transfers, data corrections via change requests. FR-MEM-010
 - [ ] Duplicate detection. FR-MEM-011
+- [ ] Link approved KYC parties: corporate → participating employer (scheme), individual → member /
+      personal-pension holder; block benefit payments against expired KYC. FR-ONB-105
 
 ## Phase 4 — Ledger & contributions (FR-ACC core, FR-CON)
 
@@ -318,3 +341,8 @@ Open — the default in *italics* is what we build to until answered (from REQUI
   transaction types, banks, places, pick-lists), fee rules. Shared mechanisms: `FundConfig` (per-fund
   records) and `SystemList` (metadata-driven Setup). pytest 98/98, vitest 33/33, tsc clean, every screen
   screenshotted at 1440 + 390. Commits on branch `phase-1-setup`. Next: Phase 2 onboarding & KYC.
+- 2026-11-02 — **Phase 2 built and verified** (onboarding & KYC): applications, documents in MinIO, versioned
+  declarations, data-driven corporate/group/individual steppers, compliance review with risk/EDD/senior
+  approval, parties, expiry reminders job. Also fixed: MinIO bucket now created at API start-up, `tzdata`
+  pinned (worker jobs failed on Windows without it), sign-in survives a server blip instead of signing
+  people out. Next: Phase 3 membership.
