@@ -27,7 +27,18 @@ import { useUrlTab } from "../../../hooks/useUrlState";
 import { useApproval, useApprovals, useDecideApproval } from "../../../queries/approvals";
 import { formatDate, formatDateTime, MONTH_NAMES } from "../../../utils/date";
 import { statusLabel } from "../../../utils/labels";
-import { BANK_PURPOSE_LABELS, FUND_TYPE_LABELS, ROLE_LABELS, type Approval, type BankAccountPurpose, type FundType, type UserRole } from "../../../api/types";
+import {
+  BANK_PURPOSE_LABELS,
+  BILLING_FREQUENCY_LABELS,
+  FUND_TYPE_LABELS,
+  ROLE_LABELS,
+  type Approval,
+  type BankAccountPurpose,
+  type BillingFrequency,
+  type FundType,
+  type UserRole,
+} from "../../../api/types";
+import { dueDayLabel } from "../funds/schemes/schemeLabels";
 
 const VIEWS = ["review", "mine", "history"] as const;
 type View = (typeof VIEWS)[number];
@@ -55,6 +66,9 @@ function formatValue(key: string, value: unknown): string {
   if (key === "roles" && Array.isArray(value)) return value.map((r) => ROLE_LABELS[r as UserRole] ?? r).join(", ");
   if (key === "fund_type") return FUND_TYPE_LABELS[value as FundType] ?? String(value);
   if (key === "financial_year_end_month") return MONTH_NAMES[Number(value) - 1] ?? String(value);
+  if (key === "contribution_day") return dueDayLabel(Number(value));
+  if (key === "billing_frequency") return BILLING_FREQUENCY_LABELS[value as BillingFrequency] ?? String(value);
+  if (key.endsWith("_date") && typeof value === "string") return formatDate(value);
   if (key === "status") return statusLabel(String(value));
   if (Array.isArray(value)) {
     if (value.length === 0) return "—";
@@ -94,7 +108,7 @@ function ApprovalDialog({ approval, onClose }: { approval: Approval; onClose: ()
           <Typography variant="body2" color="text.secondary">
             Requested by {approval.initiated_by} on {formatDateTime(approval.created_at)}
           </Typography>
-          <DiffView after={approval.payload} before={approval.previous} hide={["action"]} format={formatValue} />
+          <DiffView after={approval.payload} before={approval.previous} hide={["action", "fund_id"]} format={formatValue} />
           {approval.status !== "pending" && (
             <Alert severity={approval.status === "approved" ? "success" : "info"}>
               {approval.status === "cancelled" ? "Withdrawn by the requester" : `${approval.status === "approved" ? "Approved" : "Rejected"} by ${approval.reviewed_by ?? "—"}`}

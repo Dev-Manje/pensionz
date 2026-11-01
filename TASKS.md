@@ -29,6 +29,8 @@ Answered:
       (the scheme/fund officer who remits contributions) are both must-have.
 - [x] **Branding** — 2026-11-01: Pensionz is an **independent product**; Old Mutual/PCL documents are
       reference only. Neutral brand in `frontend/src/brand.ts` + `BRAND_*` settings, re-themeable later.
+- [x] **Fund access on approval** — 2026-11-01: the maker *and* the checker of a new fund are
+      granted access to it (confirmed by the user).
 - [x] **Fund setup details** — 2026-11-01: fund code free text ≤ 10 chars (legacy codes kept);
       bank/branch picked from a seeded Malawi bank list (pulled forward from FR-CFG-010); trustees are
       a list (no logins until the trustee portal); optional financial year-end month on the fund;
@@ -112,10 +114,17 @@ Open — the default in *italics* is what we build to until answered (from REQUI
         409/422; seed has four invented funds.
 - [ ] Bank & branch codes / SWIFT codes for the seeded banks (needs a confirmed list) and a
       reference-data maintenance screen. FR-CFG-010
-- [ ] Processing month per fund: open period, close with checklist stub, re-open with approval;
-      `periods.require_open`. FR-CFG-002
-- [ ] Participating employers / schemes under a fund (umbrella), with contribution day and contacts;
-      link principal officers to schemes. FR-CFG-003
+- [x] Processing month per fund: open period, close with checklist stub, re-open with approval;
+      `periods.require_open`. FR-CFG-002 — done 2026-11-01, see `services/periods.py`,
+      `routes/staff/funds/FundPeriodsTab.tsx`, migration `d81f6b2c9a40`. Finance opens/closes; re-open of
+      the latest closed month → finance checker; checklist items are "not checked yet" until their
+      phases fill them in (FR-ACC-006). pytest 10 new, smoke 14/14, screenshots viewed.
+- [x] Participating employers / schemes under a fund (umbrella), with contribution day and contacts;
+      link principal officers to schemes. FR-CFG-003 — done 2026-11-01, see `services/schemes.py`,
+      `routes/staff/funds/schemes/`, migration `e5a3c7d10b62`. Approval kind `scheme_setup` covers details
+      + principal-officer links; code unique per fund; due day 1–28 of the following month; new employers
+      only in active funds. pytest 9 new, smoke 14/14, screenshots viewed. Shared `FormLayout` /
+      `DetailSection` components extracted.
 - [ ] Benefit categories: DC design, EE/ER rates, salary basis, NRA, eligibility, vesting scale,
       default option. FR-CFG-004
 - [ ] Account types (Pension Fund, Member, Company, Reserve, Share) and transaction types

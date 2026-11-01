@@ -11,7 +11,7 @@ from app.models.fund import Fund, FundStatus
 from app.models.identity import User, UserRole
 from app.schemas.approval import ApprovalOut
 from app.schemas.fund import BankAccountOut, FundIn, FundOut, FundSummaryOut, TrusteeOut
-from app.services import fund_access
+from app.services import fund_access, periods
 from app.services import funds as fund_service
 
 router = APIRouter(prefix="/funds", tags=["funds"])
@@ -32,6 +32,7 @@ def _summary(db: Session, fund: Fund) -> dict:
         "trustee_count": sum(1 for t in fund.trustees if t.active),
         "bank_account_count": sum(1 for a in fund.bank_accounts if a.active),
         "pending_approval_id": fund_service.pending_request_id(db, fund.id),
+        "current_period": open_period.period if (open_period := periods.current(db, fund.id)) else None,
     }
 
 

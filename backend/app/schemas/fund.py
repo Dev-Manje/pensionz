@@ -125,6 +125,8 @@ class FundSummaryOut(BaseModel):
     trustee_count: int
     bank_account_count: int
     pending_approval_id: uuid.UUID | None
+    # First day of the open processing month, if one has been opened.
+    current_period: date | None
 
 
 class FundOut(FundSummaryOut):

@@ -12,7 +12,9 @@ from app.core.database import SessionLocal
 from app.models.fund import BankAccountPurpose, Fund, FundBankAccount, FundTrustee, FundType
 from app.models.identity import STAFF_ROLES, UserRole
 from app.models.mixins import utcnow
+from app.models.period import FundPeriod, PeriodStatus
 from app.models.reference import Bank
+from app.models.scheme import Scheme, SchemeOfficer
 from app.services import fund_access, identity
 
 DEV_PASSWORD = "Pensionz2026"
@@ -105,11 +107,47 @@ def grant_seed_access(db) -> None:
             fund_access.grant(db, user.id, fund_id, None)
 
 
+# Invented participating employers: (fund code, code, name, contribution day, principal officer email or None)
+SCHEMES = [
+    ("UMB01", "CTE01", "Chikwawa Tea Estates Ltd", 14, "po@pensionz.dev"),
+    ("UMB01", "NBL01", "Nkhata Bay Logistics Ltd", 10, None),
+    ("LSS01", "LSC01", "Lakeshore Sugar Company Ltd", 14, "po@pensionz.dev"),
+    ("MTDB1", "MET01", "Mulunguzi Education Trust", 7, None),
+]
+
+
+def seed_schemes(db) -> None:
+    for fund_code, code, name, day, officer_email in SCHEMES:
+        fund = db.execute(select(Fund).where(Fund.code == fund_code)).scalar_one()
+        if db.execute(select(Scheme.id).where(Scheme.fund_id == fund.id, Scheme.code == code)).first() is not None:
+            continue
+        scheme = Scheme(fund_id=fund.id, code=code, name=name, contribution_day=day, join_date=date(2024, 1, 1),
+                        address_line1="P.O. Box 100", address_line2="Blantyre", contact_name="Human Resources Manager",
+                        contact_email=f"hr@{code.lower()}.example", contact_phone="+265 888 000 000")
+        db.add(scheme)
+        db.flush()
+        if officer_email:
+            scheme.officers.append(SchemeOfficer(user_id=identity.find_by_email(db, officer_email).id))
+
+
+# PPF01 is left without a processing month, to show that state.
+OPEN_MONTH = date(2026, 11, 1)
+
+
+def seed_periods(db) -> None:
+    for code in ("UMB01", "LSS01", "MTDB1"):
+        fund = db.execute(select(Fund).where(Fund.code == code)).scalar_one()
+        if db.execute(select(FundPeriod.id).where(FundPeriod.fund_id == fund.id)).first() is None:
+            db.add(FundPeriod(fund_id=fund.id, period=OPEN_MONTH, status=PeriodStatus.open, opened_at=utcnow()))
+
+
 def main() -> None:
     with SessionLocal() as db:
         created = seed_users(db)
         funds = seed_funds(db)
         grant_seed_access(db)
+        seed_periods(db)
+        seed_schemes(db)
         db.commit()
     print(f"Seed complete: {created} user(s), {funds} fund(s) created (password for all: {DEV_PASSWORD}).")
 

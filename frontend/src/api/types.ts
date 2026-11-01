@@ -164,6 +164,8 @@ export interface FundSummary {
   trustee_count: number;
   bank_account_count: number;
   pending_approval_id: string | null;
+  // First day of the open processing month.
+  current_period: string | null;
 }
 
 export interface FundDetails {
@@ -257,4 +259,97 @@ export interface UserNotificationPage {
   items: UserNotification[];
   total: number;
   unread: number;
+}
+
+// ---- Processing months (FR-CFG-002)
+
+export type PeriodStatus = "open" | "closed";
+
+export interface FundPeriod {
+  id: string;
+  period: string; // first day of the month
+  status: PeriodStatus;
+  opened_at: string;
+  opened_by: string | null;
+  closed_at: string | null;
+  closed_by: string | null;
+}
+
+export interface CloseCheck {
+  key: string;
+  label: string;
+  status: "passed" | "failed" | "not_available";
+  detail: string | null;
+}
+
+export interface FundPeriods {
+  current: FundPeriod | null;
+  checklist: CloseCheck[];
+  history: FundPeriod[];
+  pending_reopen_approval_id: string | null;
+  can_open_first: boolean;
+  can_close: boolean;
+  can_request_reopen: boolean;
+}
+
+// ---- Participating employers / schemes (FR-CFG-003)
+
+export type SchemeStatus = "active" | "suspended" | "exited";
+export type BillingFrequency = "monthly" | "quarterly" | "annually";
+
+export const BILLING_FREQUENCY_LABELS: Record<BillingFrequency, string> = {
+  monthly: "Monthly",
+  quarterly: "Quarterly",
+  annually: "Annually",
+};
+
+export interface SchemeOfficer {
+  user_id: string;
+  full_name: string;
+  email: string;
+}
+
+export interface SchemeSummary {
+  id: string;
+  fund_id: string;
+  code: string;
+  name: string;
+  status: SchemeStatus;
+  contribution_day: number;
+  billing_frequency: BillingFrequency;
+  contact_name: string | null;
+  officer_count: number;
+  pending_approval_id: string | null;
+}
+
+export interface SchemeDetails {
+  registration_number: string | null;
+  tpin: string | null;
+  join_date: string | null;
+  exit_date: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  address_line3: string | null;
+  phone: string | null;
+  email: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+}
+
+export interface Scheme extends SchemeSummary, SchemeDetails {
+  fund_code: string;
+  fund_name: string;
+  officers: SchemeOfficer[];
+  can_edit: boolean;
+}
+
+// The whole employer as it should be, including linked principal officers.
+export interface SchemeInput extends SchemeDetails {
+  code: string;
+  name: string;
+  status: SchemeStatus;
+  contribution_day: number | null;
+  billing_frequency: BillingFrequency;
+  contact_name: string | null;
+  officer_ids: string[];
 }

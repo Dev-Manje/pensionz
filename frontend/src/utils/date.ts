@@ -56,4 +56,11 @@ export function todayIso(): string {
   return isoDate(new Date());
 }
 
+// A processing month ("2026-10-01") as "Oct 2026".
+export function formatPeriod(value?: string | null): string {
+  const match = value ? DATE_ONLY.exec(value) : null;
+  if (!match) return "—";
+  return `${MONTHS[Number(match[2]) - 1]}${NBSP}${match[1]}`;
+}
+
 export const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];

@@ -1,5 +1,5 @@
 import { apiFetch } from "./client";
-import type { Approval, Bank, Fund, FundInput, FundSummary } from "./types";
+import type { Approval, Bank, Fund, FundInput, FundPeriods, FundSummary } from "./types";
 
 export function listFunds(q?: string) {
   return apiFetch<FundSummary[]>(`/funds${q ? `?q=${encodeURIComponent(q)}` : ""}`);
@@ -20,4 +20,21 @@ export function proposeFundUpdate(id: string, input: FundInput) {
 
 export function listBanks() {
   return apiFetch<Bank[]>("/reference/banks");
+}
+
+export function getPeriods(fundId: string) {
+  return apiFetch<FundPeriods>(`/funds/${fundId}/periods`);
+}
+
+export function openFirstPeriod(fundId: string, period: string) {
+  return apiFetch<FundPeriods>(`/funds/${fundId}/periods/open`, { method: "POST", body: JSON.stringify({ period }) });
+}
+
+export function closePeriod(fundId: string, period: string) {
+  return apiFetch<FundPeriods>(`/funds/${fundId}/periods/close`, { method: "POST", body: JSON.stringify({ period }) });
+}
+
+// Returns the approval request: a finance checker must approve the re-open.
+export function requestReopen(fundId: string, periodId: string, reason: string) {
+  return apiFetch<Approval>(`/funds/${fundId}/periods/${periodId}/reopen`, { method: "POST", body: JSON.stringify({ reason }) });
 }

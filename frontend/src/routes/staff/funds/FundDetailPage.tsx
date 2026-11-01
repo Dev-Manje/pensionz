@@ -1,8 +1,7 @@
-import type { ReactNode } from "react";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import Alert from "@mui/material/Alert";
-import Box from "@mui/material/Box";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
+import Chip from "@mui/material/Chip";
 import Button from "@mui/material/Button";
 import Link from "@mui/material/Link";
 import Paper from "@mui/material/Paper";
@@ -15,78 +14,57 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Tabs from "@mui/material/Tabs";
 import Typography from "@mui/material/Typography";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { useTheme } from "@mui/material/styles";
 import { LoadingState } from "../../../components/LoadingState";
 import { PageHeader } from "../../../components/PageHeader";
+import { DetailField, DetailSection } from "../../../components/DetailSection";
 import { ResponsiveTable } from "../../../components/ResponsiveTable";
 import { StatusChip } from "../../../components/StatusChip";
 import { TableStateRow } from "../../../components/TableStateRow";
 import { useUrlTab } from "../../../hooks/useUrlState";
 import { useFund } from "../../../queries/funds";
-import { formatDate, MONTH_NAMES } from "../../../utils/date";
+import { FundPeriodsTab } from "./FundPeriodsTab";
+import { FundSchemesTab } from "./schemes/FundSchemesTab";
+import { formatDate, formatPeriod, MONTH_NAMES } from "../../../utils/date";
 import { BANK_PURPOSE_LABELS, FUND_TYPE_LABELS, type Fund } from "../../../api/types";
 
-const TABS = ["details", "trustees", "bank-accounts"] as const;
+const TABS = ["details", "employers", "trustees", "bank-accounts", "processing-months"] as const;
 type FundTab = (typeof TABS)[number];
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <Box>
-      <Typography variant="caption" color="text.secondary" component="dt">
-        {label}
-      </Typography>
-      <Typography component="dd" sx={{ m: 0, overflowWrap: "anywhere" }}>
-        {children || "—"}
-      </Typography>
-    </Box>
-  );
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-      <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 600, mb: 2 }}>
-        {title}
-      </Typography>
-      <Box component="dl" sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", lg: "repeat(3, 1fr)" }, gap: 2, m: 0 }}>
-        {children}
-      </Box>
-    </Paper>
-  );
-}
 
 function Details({ fund }: { fund: Fund }) {
   const address = [fund.address_line1, fund.address_line2, fund.address_line3, fund.address_line4, fund.address_line5].filter(Boolean);
   return (
     <Stack spacing={2}>
-      <Section title="Registration">
-        <Field label="Fund code">{fund.code}</Field>
-        <Field label="Fund type">{FUND_TYPE_LABELS[fund.fund_type]}</Field>
-        <Field label="Registration number">{fund.registration_number}</Field>
-        <Field label="TPIN">{fund.tpin}</Field>
-        <Field label="Financial year ends">
+      <DetailSection title="Registration">
+        <DetailField label="Fund code">{fund.code}</DetailField>
+        <DetailField label="Fund type">{FUND_TYPE_LABELS[fund.fund_type]}</DetailField>
+        <DetailField label="Registration number">{fund.registration_number}</DetailField>
+        <DetailField label="TPIN">{fund.tpin}</DetailField>
+        <DetailField label="Financial year ends">
           {fund.financial_year_end_month ? MONTH_NAMES[fund.financial_year_end_month - 1] : "December (calendar year)"}
-        </Field>
-      </Section>
-      <Section title="Address and contact">
-        <Field label="Address">
+        </DetailField>
+      </DetailSection>
+      <DetailSection title="Address and contact">
+        <DetailField label="Address">
           {address.length > 0 &&
             address.map((line) => (
               <span key={line} style={{ display: "block" }}>
                 {line}
               </span>
             ))}
-        </Field>
-        <Field label="Phone">{fund.phone}</Field>
-        <Field label="Fax">{fund.fax}</Field>
-        <Field label="Email">{fund.email}</Field>
-        <Field label="Website">{fund.website}</Field>
-      </Section>
-      <Section title="Contact person">
-        <Field label="Name">{fund.contact_name}</Field>
-        <Field label="Email">{fund.contact_email}</Field>
-        <Field label="Phone">{fund.contact_phone}</Field>
-        <Field label="Alternative phone">{fund.contact_alt_phone}</Field>
-      </Section>
+        </DetailField>
+        <DetailField label="Phone">{fund.phone}</DetailField>
+        <DetailField label="Fax">{fund.fax}</DetailField>
+        <DetailField label="Email">{fund.email}</DetailField>
+        <DetailField label="Website">{fund.website}</DetailField>
+      </DetailSection>
+      <DetailSection title="Contact person">
+        <DetailField label="Name">{fund.contact_name}</DetailField>
+        <DetailField label="Email">{fund.contact_email}</DetailField>
+        <DetailField label="Phone">{fund.contact_phone}</DetailField>
+        <DetailField label="Alternative phone">{fund.contact_alt_phone}</DetailField>
+      </DetailSection>
     </Stack>
   );
 }
@@ -157,6 +135,8 @@ export function FundDetailPage() {
   const { fundId } = useParams();
   const query = useFund(fundId);
   const [tab, setTab] = useUrlTab(TABS);
+  // Five tabs fit on a desktop; phones scroll them sideways.
+  const narrow = useMediaQuery(useTheme().breakpoints.down("md"));
 
   if (query.isLoading) return <LoadingState />;
   if (query.error || !query.data) {
@@ -190,6 +170,7 @@ export function FundDetailPage() {
       />
       <Stack direction="row" spacing={1} sx={{ mb: 2, mt: -1.5 }}>
         <StatusChip status={fund.status} />
+        <Chip size="small" variant="outlined" color={fund.current_period ? "primary" : "default"} label={fund.current_period ? `Processing ${formatPeriod(fund.current_period)}` : "No processing month open"} />
       </Stack>
       {fund.pending_approval_id && (
         <Alert
@@ -204,14 +185,18 @@ export function FundDetailPage() {
           A change to this fund is waiting for approval. It can be edited again once that change is decided.
         </Alert>
       )}
-      <Tabs value={tab} onChange={(_, v: FundTab) => setTab(v)} sx={{ mb: 2 }} variant="scrollable" scrollButtons="auto">
+      <Tabs value={tab} onChange={(_, v: FundTab) => setTab(v)} sx={{ mb: 2 }} variant={narrow ? "scrollable" : "standard"} scrollButtons="auto">
         <Tab value="details" label="Details" />
+        <Tab value="employers" label="Employers" />
         <Tab value="trustees" label={`Trustees (${fund.trustees.length})`} />
         <Tab value="bank-accounts" label={`Bank accounts (${fund.bank_accounts.length})`} />
+        <Tab value="processing-months" label="Processing months" />
       </Tabs>
       {tab === "details" && <Details fund={fund} />}
+      {tab === "employers" && <FundSchemesTab fund={fund} />}
       {tab === "trustees" && <Trustees fund={fund} />}
       {tab === "bank-accounts" && <BankAccounts fund={fund} />}
+      {tab === "processing-months" && <FundPeriodsTab fund={fund} />}
     </>
   );
 }

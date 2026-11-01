@@ -16,10 +16,14 @@ import { TableStateRow } from "../../../components/TableStateRow";
 import { useAuth } from "../../../auth/AuthContext";
 import { useFunds } from "../../../queries/funds";
 import { FUND_TYPE_LABELS } from "../../../api/types";
+import { formatPeriod } from "../../../utils/date";
 import { FundDetailPage } from "./FundDetailPage";
 import { FundFormPage } from "./FundFormPage";
+import { SchemeDetailPage } from "./schemes/SchemeDetailPage";
+import { SchemeFormPage } from "./schemes/SchemeFormPage";
 
-// Setup → Funds (FR-CFG-001): /funds, /funds/new, /funds/<id>, /funds/<id>/edit.
+// Setup → Funds (FR-CFG-001): /funds, /funds/new, /funds/<id>, /funds/<id>/edit, and the
+// fund's employers (FR-CFG-003) under /funds/<id>/employers/…
 export function FundsPage() {
   return (
     <Routes>
@@ -27,6 +31,9 @@ export function FundsPage() {
       <Route path="new" element={<FundFormPage />} />
       <Route path=":fundId" element={<FundDetailPage />} />
       <Route path=":fundId/edit" element={<FundFormPage />} />
+      <Route path=":fundId/employers/new" element={<SchemeFormPage />} />
+      <Route path=":fundId/employers/:schemeId" element={<SchemeDetailPage />} />
+      <Route path=":fundId/employers/:schemeId/edit" element={<SchemeFormPage />} />
     </Routes>
   );
 }
@@ -60,6 +67,7 @@ function FundList() {
               <TableCell>Code</TableCell>
               <TableCell>Fund</TableCell>
               <TableCell>Type</TableCell>
+              <TableCell>Processing month</TableCell>
               <TableCell align="right">Trustees</TableCell>
               <TableCell align="right">Bank accounts</TableCell>
               <TableCell>Status</TableCell>
@@ -67,7 +75,7 @@ function FundList() {
           </TableHead>
           <TableBody>
             <TableStateRow
-              colSpan={6}
+              colSpan={7}
               loading={funds.isLoading}
               error={funds.error?.message ?? null}
               onRetry={() => funds.refetch()}
@@ -89,6 +97,7 @@ function FundList() {
                 </TableCell>
                 <TableCell>{f.name}</TableCell>
                 <TableCell>{FUND_TYPE_LABELS[f.fund_type]}</TableCell>
+                <TableCell sx={{ whiteSpace: "nowrap" }}>{f.current_period ? formatPeriod(f.current_period) : "Not opened"}</TableCell>
                 <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums" }}>{f.trustee_count}</TableCell>
                 <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums" }}>{f.bank_account_count}</TableCell>
                 <TableCell>

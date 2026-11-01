@@ -1,20 +1,17 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useState, type FormEvent } from "react";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import Alert from "@mui/material/Alert";
-import Box from "@mui/material/Box";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
 import Button from "@mui/material/Button";
-import IconButton from "@mui/material/IconButton";
 import Link from "@mui/material/Link";
 import MenuItem from "@mui/material/MenuItem";
-import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import AddIcon from "@mui/icons-material/Add";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import { LoadingState } from "../../../components/LoadingState";
 import { PageHeader } from "../../../components/PageHeader";
+import { FormGrid, FormSection, RepeatRow } from "../../../components/form/FormLayout";
 import { useFeedback } from "../../../components/feedback/FeedbackProvider";
 import { useBanks, useFund, useProposeFund } from "../../../queries/funds";
 import { MONTH_NAMES } from "../../../utils/date";
@@ -78,48 +75,6 @@ function toInput(fund: Fund): FundInput {
     purpose: a.purpose,
   }));
   return input;
-}
-
-function FormSection({ title, description, children, action }: { title: string; description?: string; children: ReactNode; action?: ReactNode }) {
-  return (
-    <Paper component="section" sx={{ p: { xs: 2, sm: 3 } }}>
-      <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start", mb: 2, gap: 2 }}>
-        <Box>
-          <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 600 }}>
-            {title}
-          </Typography>
-          {description && (
-            <Typography variant="body2" color="text.secondary">
-              {description}
-            </Typography>
-          )}
-        </Box>
-        {action && <Box sx={{ flexShrink: 0, "& .MuiButton-root": { whiteSpace: "nowrap" } }}>{action}</Box>}
-      </Stack>
-      {children}
-    </Paper>
-  );
-}
-
-function Grid({ children }: { children: ReactNode }) {
-  return <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", lg: "repeat(3, 1fr)" }, gap: 2 }}>{children}</Box>;
-}
-
-// A row in a repeatable list (trustee, bank account), with its remove button.
-function RepeatRow({ label, onRemove, children }: { label: string; onRemove: () => void; children: ReactNode }) {
-  return (
-    <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1, p: 2 }}>
-      <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
-        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-          {label}
-        </Typography>
-        <IconButton onClick={onRemove} aria-label={`Remove ${label}`} title="Remove" size="small">
-          <DeleteOutlineIcon fontSize="small" />
-        </IconButton>
-      </Stack>
-      <Grid>{children}</Grid>
-    </Box>
-  );
 }
 
 // Create or edit a fund (FR-CFG-001). The whole fund goes to a scheme-setup
@@ -196,7 +151,7 @@ function FundForm({ fund }: { fund: Fund | null }) {
       />
       <Stack component="form" spacing={2} onSubmit={submit} noValidate={false}>
         <FormSection title="Fund">
-          <Grid>
+          <FormGrid>
             {text("code", "Fund code", {
               required: true,
               disabled: locked.has("code"),
@@ -251,11 +206,11 @@ function FundForm({ fund }: { fund: Fund | null }) {
                 ))}
               </TextField>
             )}
-          </Grid>
+          </FormGrid>
         </FormSection>
 
         <FormSection title="Address and contact">
-          <Grid>
+          <FormGrid>
             {text("address_line1", "Address line 1")}
             {text("address_line2", "Address line 2")}
             {text("address_line3", "Address line 3")}
@@ -265,16 +220,16 @@ function FundForm({ fund }: { fund: Fund | null }) {
             {text("fax", "Fax", { type: "tel" })}
             {text("email", "Email", { type: "email" })}
             {text("website", "Website", { helperText: "e.g. www.example.mw" })}
-          </Grid>
+          </FormGrid>
         </FormSection>
 
         <FormSection title="Contact person" description="Who we deal with day to day about this fund.">
-          <Grid>
+          <FormGrid>
             {text("contact_name", "Full name")}
             {text("contact_email", "Email", { type: "email" })}
             {text("contact_phone", "Phone", { type: "tel" })}
             {text("contact_alt_phone", "Alternative phone", { type: "tel" })}
-          </Grid>
+          </FormGrid>
         </FormSection>
 
         <FormSection

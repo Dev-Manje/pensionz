@@ -21,3 +21,17 @@ def make_user(db: Session, *roles: UserRole, password: str = PASSWORD) -> User:
 
 def auth_headers(user: User) -> dict[str, str]:
     return {"Authorization": f"Bearer {create_access_token(str(user.id))}"}
+
+
+def make_fund(db: Session, *staff: User, code: str | None = None, fund_type: str = "standalone_dc"):
+    """A fund (no approval round-trip) that the given staff users administer."""
+    from app.models.fund import Fund, FundType
+    from app.services import fund_access
+
+    fund = Fund(code=code or f"F{next(_seq):05d}", name="Factory Fund", fund_type=FundType(fund_type))
+    db.add(fund)
+    db.flush()
+    for user in staff:
+        fund_access.grant(db, user.id, fund.id, None)
+    db.flush()
+    return fund

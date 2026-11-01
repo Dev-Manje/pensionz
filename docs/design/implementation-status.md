@@ -85,3 +85,38 @@ Migration `c47e2a91f0d3_funds_and_banks.py`.
 - **Seed:** UMB01 (umbrella DC), LSS01 (stand-alone DC), MTDB1 (DB), PPF01 (personal pension) —
   invented names, each with trustees and a collections account; every seeded fund-level staff user
   administers all four.
+
+### Processing month per fund (FR-CFG-002) — 2026-11-01
+
+Migration `d81f6b2c9a40_fund_periods.py`: `fund_period` (fund, first-of-month `period`, open/closed,
+who/when opened and closed); a partial unique index allows **one open month per fund**.
+`services/periods.py`:
+- `require_open(db, fund_id, date)` — the guard every posting must call (409 when the date isn't in
+  the open month or no month is open). `has_postings` returns False until the ledger exists (Phase 4).
+- Finance opens the first month (`POST /funds/{id}/periods/open`), then closes months one at a time
+  (`POST .../close` with the month on screen; stale → 409). Close runs `checklist()` — five month-end
+  checks, all `not_available` until their areas are built; any `failed` check blocks the close — then
+  opens the next month.
+- Re-open: `POST .../{period_id}/reopen` with a reason → approval kind `period_reopen` (finance checker,
+  fund-scoped). Only the latest closed month; on approval the auto-opened following month is removed
+  (audited) unless it has postings (409).
+- `GET /funds/{id}/periods` returns the open month, checklist, history and what the viewer may do;
+  fund list/detail carry `current_period`.
+Frontend: fund page tab "Processing months" (open-first form, open month card with checks and
+"Close <month>" confirmation, history with "Request re-open"); funds list "Processing month" column.
+Seed: Nov 2026 open for UMB01, LSS01, MTDB1; PPF01 left unopened.
+
+### Participating employers / schemes (FR-CFG-003) — 2026-11-01
+
+Migration `e5a3c7d10b62_schemes.py`: `scheme` (fund, code unique per fund, name, status active /
+suspended / exited, registration no., TPIN, join/exit dates, `contribution_day` 1–28 = due by that day
+of the month after the contributions month, billing frequency monthly/quarterly/annually, address,
+contact) and `scheme_officer` (scheme ↔ principal-officer user, many-to-many).
+`services/schemes.py`: approval kind `scheme_setup` (scheme setup checker, fund-scoped) applies the whole
+snapshot — details plus `principal_officers` (only active users holding the principal officer role).
+New employers only in **active** funds; exited needs an exit date. API: `GET/POST /funds/{id}/schemes`,
+`GET/PUT /schemes/{id}`, `GET /schemes/officer-candidates` (scheme setup roles + admin).
+Frontend: fund page tab "Employers", `/funds/<id>/employers/<schemeId>` (Details / Principal officers),
+sectioned create/edit form with an officer picker. Shared form/detail building blocks now live in
+`components/form/FormLayout.tsx` and `components/DetailSection.tsx`. Fund tabs scroll only on narrow
+screens. Seed: CTE01 + NBL01 (UMB01), LSC01 (LSS01), MET01 (MTDB1); po@pensionz.dev linked to CTE01 and LSC01.

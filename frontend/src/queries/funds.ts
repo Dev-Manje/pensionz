@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getFund, listBanks, listFunds, proposeFund, proposeFundUpdate } from "../api/funds";
+import { closePeriod, getFund, getPeriods, listBanks, listFunds, openFirstPeriod, proposeFund, proposeFundUpdate, requestReopen } from "../api/funds";
 import type { FundInput } from "../api/types";
 
 export const fundKeys = {
   all: ["funds"] as const,
   list: (q: string) => ["funds", "list", q] as const,
   detail: (id: string) => ["funds", "detail", id] as const,
+  periods: (id: string) => ["funds", "periods", id] as const,
 };
 
 export function useFunds(q = "") {
@@ -28,6 +29,35 @@ export function useProposeFund() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["approvals"] });
       queryClient.invalidateQueries({ queryKey: fundKeys.all });
+    },
+  });
+}
+
+export function usePeriods(fundId: string) {
+  return useQuery({ queryKey: fundKeys.periods(fundId), queryFn: () => getPeriods(fundId) });
+}
+
+type PeriodAction =
+  | { action: "open" | "close"; period: string }
+  | { action: "reopen"; periodId: string; reason: string };
+
+// Opening/closing changes the fund's current month too, so refresh all fund queries.
+export function usePeriodAction(fundId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (args: PeriodAction): Promise<unknown> => {
+      switch (args.action) {
+        case "open":
+          return openFirstPeriod(fundId, args.period);
+        case "close":
+          return closePeriod(fundId, args.period);
+        case "reopen":
+          return requestReopen(fundId, args.periodId, args.reason);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: fundKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["approvals"] });
     },
   });
 }
