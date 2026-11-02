@@ -61,7 +61,7 @@ function Fields({ fields, data, onChange }: { fields: FieldDef[]; data: Data; on
   );
 }
 
-function CategorySelect({ schemeId, value, onChange }: { schemeId: string; value: string | null; onChange: (v: string | null) => void }) {
+export function CategorySelect({ schemeId, value, onChange }: { schemeId: string; value: string | null; onChange: (v: string | null) => void }) {
   const categories = useCategories(schemeId);
   const options = (categories.data ?? []).filter((c) => c.status === "active" || c.id === value);
   return (
@@ -159,8 +159,8 @@ function MembershipStep({ member, fundId, setFundId, data, set, merge }: {
       )}
       {member && !noEmployer && (
         <Alert severity="info">
-          Employer {member.labels.scheme_id ?? "—"}, category {member.labels.category_id ?? "—"}. Moving the member to another category or employer is a
-          separate request (coming with change requests).
+          Employer {member.labels.scheme_id ?? "—"}, category {member.labels.category_id ?? "—"}. To move the member to another category or employer, use
+          “Move” on the member's page.
         </Alert>
       )}
 

@@ -275,3 +275,12 @@ API: `GET|POST /members/{id}/beneficiaries`, `GET /members/{id}/employment`, `PO
 Frontend: member tabs "Beneficiaries" (current table with Minor chips, earlier versions, nomination dialog with live share
 total and guardian fields for minors) and "Salary & service" (now card, salary history + record dialog, service periods
 + editor, total pensionable service).
+
+### Category moves and employer transfers (FR-MEM-010) — 2026-11-02
+
+Approval kind `member_move` (`services/members.propose_move`, `POST /members/{id}/move`): active or inactive members;
+target employer active and in the fund (a different employer only in an umbrella fund → `employer_transfer`, otherwise
+`category_move`); target category active with terms in force on the effective date; effective date after the current
+assignment's start and not in the future. Approval closes the open `member_assignment` the day before, opens the new
+one with the reason, updates the member (and for transfers the employer join date and optional new employee number).
+Data corrections remain `member_update`. Frontend: "Move / transfer" (umbrella) or "Move category" dialog on the member page.

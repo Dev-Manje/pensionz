@@ -226,7 +226,12 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       months ÷ 12 + days ÷ 365.25 × factor). Member tab "Salary & service". pytest 13 new, smoke 12/12, screenshots viewed.
 - [ ] **Bulk member upload template** (design, download, validate, row errors, maker-checker
       import) + printable new-member application form. FR-MEM-006, FR-MEM-007
-- [ ] Category moves, employer transfers, data corrections via change requests. FR-MEM-010
+- [x] Category moves, employer transfers, data corrections via change requests. FR-MEM-010 — done 2026-11-02:
+      corrections = `member_update` (slice 1); moves = approval kind `member_move` (active/inactive members, effective
+      after the current assignment started and not in the future, target category active with terms in force; another
+      employer only within an umbrella fund — sets the employer join date and optional new employee number); the open
+      `member_assignment` row is closed the day before. "Move / transfer" dialog on the member page. pytest 3 new,
+      smoke 5/5, screenshots viewed.
 - [x] Duplicate detection. FR-MEM-011 — done 2026-11-02: same ID number (normalised) or same name + date of
       birth across all funds; live warning in the form, listed for the checker; same ID in the same fund (or a
       pending new member) → 409.

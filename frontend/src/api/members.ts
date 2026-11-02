@@ -36,6 +36,8 @@ export const proposeMemberUpdate = (id: string, values: MemberValues) =>
 export const proposeStatusChange = (id: string, body: { to_status: MemberStatus; effective_date: string; reason: string }) =>
   apiFetch<Approval>(`/members/${id}/status`, { method: "POST", body: JSON.stringify(body) });
 
+export const proposeMove = (id: string, body: { scheme_id: string; category_id: string; effective_date: string; employee_no: string | null; reason: string }) =>
+  apiFetch<Approval>(`/members/${id}/move`, { method: "POST", body: JSON.stringify(body) });
 export const getNominations = (id: string) => apiFetch<Nominations>(`/members/${id}/beneficiaries`);
 export const proposeNomination = (id: string, body: { signed_date: string; note: string | null; beneficiaries: BeneficiaryInput[] }) =>
   apiFetch<Approval>(`/members/${id}/beneficiaries`, { method: "POST", body: JSON.stringify(body) });

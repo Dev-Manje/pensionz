@@ -125,6 +125,17 @@ class StatusChangeIn(_Clean):
     reason: str = Field(min_length=3, max_length=1000)
 
 
+class MoveIn(_Clean):
+    """Category move, or transfer to another employer in the same umbrella fund (FR-MEM-010)."""
+
+    scheme_id: uuid.UUID
+    category_id: uuid.UUID
+    effective_date: date
+    # A transfer usually comes with the new employer's staff number.
+    employee_no: str | None = Field(default=None, max_length=30)
+    reason: str = Field(min_length=3, max_length=1000)
+
+
 class DuplicateOut(BaseModel):
     member_id: uuid.UUID
     account_code: str

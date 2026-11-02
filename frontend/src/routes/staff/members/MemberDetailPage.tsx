@@ -30,7 +30,9 @@ import { useFeedback } from "../../../components/feedback/FeedbackProvider";
 import { useUrlTab } from "../../../hooks/useUrlState";
 import { useKycOptions } from "../../../queries/kyc";
 import { useMember, useMemberProposal } from "../../../queries/members";
-import { proposeStatusChange } from "../../../api/members";
+import { proposeMove, proposeStatusChange } from "../../../api/members";
+import { useSchemes } from "../../../queries/schemes";
+import { CategorySelect } from "./MemberFormPage";
 import { MEMBER_STATUS_LABELS, type KycStanding, type Member, type MemberStatus } from "../../../api/types";
 import { formatDate } from "../../../utils/date";
 import { MemberBeneficiariesTab } from "./MemberBeneficiariesTab";
@@ -318,11 +320,70 @@ function StatusDialog({ m, open, onClose }: { m: Member; open: boolean; onClose:
   );
 }
 
+function MoveDialog({ m, onClose }: { m: Member; onClose: () => void }) {
+  const feedback = useFeedback();
+  const umbrella = m.fund.fund_type === "umbrella_dc";
+  const schemes = useSchemes(m.fund.id);
+  const submit = useMemberProposal((body: Parameters<typeof proposeMove>[1]) => proposeMove(m.id, body));
+  const [schemeId, setSchemeId] = useState(String(m.fields.scheme_id ?? ""));
+  const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [date, setDate] = useState("");
+  const [employeeNo, setEmployeeNo] = useState("");
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const transfer = schemeId !== m.fields.scheme_id;
+
+  async function send() {
+    setError(null);
+    try {
+      await submit.mutateAsync({ scheme_id: schemeId, category_id: categoryId!, effective_date: date, employee_no: employeeNo.trim() || null, reason });
+      feedback.success(`${transfer ? "Transfer" : "Category move"} sent for approval.`);
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong.");
+    }
+  }
+
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>{umbrella ? "Move or transfer" : "Move category"} — {String(m.fields.full_name)}</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ mt: 1 }}>
+          <Typography color="text.secondary">
+            Now in {m.labels.scheme_id}, category {m.labels.category_id}. The history keeps both; a member checker approves the change.
+          </Typography>
+          {umbrella && (
+            <TextField select label="Employer" value={schemeId} onChange={(e) => { setSchemeId(e.target.value); setCategoryId(null); }} helperText="Another employer in this umbrella fund is a transfer.">
+              {(schemes.data ?? []).filter((s) => s.status === "active" || s.id === schemeId).map((s) => (
+                <MenuItem key={s.id} value={s.id}>
+                  {s.code} — {s.name}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
+          {schemeId && <CategorySelect key={schemeId} schemeId={schemeId} value={categoryId} onChange={setCategoryId} />}
+          <TextField label="Takes effect" type="date" value={date} onChange={(e) => setDate(e.target.value)} required slotProps={{ inputLabel: { shrink: true } }} />
+          {transfer && <TextField label="Employee number at the new employer" value={employeeNo} onChange={(e) => setEmployeeNo(e.target.value)} />}
+          <TextField label="Reason" value={reason} onChange={(e) => setReason(e.target.value)} required multiline minRows={2} helperText="E.g. promotion letter dated 1 July." />
+          {error && <Alert severity="error">{error}</Alert>}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="contained" onClick={send} disabled={!categoryId || !date || reason.trim().length < 3 || submit.isPending}>
+          {submit.isPending ? "Sending…" : "Submit for approval"}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 export function MemberDetailPage() {
   const { memberId } = useParams();
   const query = useMember(memberId);
   const [tab, setTab] = useUrlTab(TABS);
   const [statusOpen, setStatusOpen] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
 
   if (query.isLoading) return <LoadingState />;
   if (query.error || !query.data) {
@@ -348,7 +409,12 @@ export function MemberDetailPage() {
         description={`${String(m.fields.account_code)} · ${m.fund.code}${m.labels.scheme_id ? ` · ${m.labels.scheme_id}` : ""}`}
         action={
           m.can_edit && (
-            <Stack direction="row" spacing={1}>
+            <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
+              {!!m.fields.scheme_id && (m.status === "active" || m.status === "inactive") && (
+                <Button variant="outlined" onClick={() => setMoveOpen(true)} disabled={locked}>
+                  {m.fund.fund_type === "umbrella_dc" ? "Move / transfer" : "Move category"}
+                </Button>
+              )}
               {m.allowed_transitions.length > 0 && (
                 <Button variant="outlined" onClick={() => setStatusOpen(true)} disabled={locked}>
                   Change status
@@ -389,6 +455,7 @@ export function MemberDetailPage() {
       {tab === "regulatory" && <RegulatoryTab m={m} />}
       {tab === "history" && <History m={m} />}
       {statusOpen && <StatusDialog m={m} open onClose={() => setStatusOpen(false)} />}
+      {moveOpen && <MoveDialog m={m} onClose={() => setMoveOpen(false)} />}
     </>
   );
 }

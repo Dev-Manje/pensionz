@@ -272,3 +272,58 @@ def test_employer_links_only_corporate_kyc_client(client, db):
     assert client.post(f"/api/v1/funds/{fund.id}/schemes", headers=h, json={**base, "party_id": str(person.id)}).status_code == 400
     response = client.post(f"/api/v1/funds/{fund.id}/schemes", headers=h, json={**base, "party_id": str(company.id)})
     assert response.status_code == 202 and response.json()["payload"]["party_id"] == str(company.id)
+
+
+# ---- moves and transfers (FR-MEM-010)
+
+
+def _move(client, user, member, scheme, category, when="2025-07-01", **extra):
+    return client.post(f"/api/v1/members/{member.id}/move", headers=auth_headers(user),
+                       json={"scheme_id": str(scheme.id), "category_id": str(category.id), "effective_date": when, "reason": "Promotion", **extra})
+
+
+def test_category_move_closes_old_assignment(client, db, maker, checker, setup):
+    fund, scheme, category = setup
+    member = create(client, db, maker, checker, fund, body(scheme, category))
+    mgt = _category(db, scheme, code="MGT")
+    assert _move(client, maker, member, scheme, category).status_code == 400  # same place
+    assert _move(client, maker, member, scheme, mgt, when="2023-12-31").status_code == 400  # before current start
+    response = _move(client, maker, member, scheme, mgt)
+    assert response.status_code == 202 and response.json()["payload"]["action"] == "category_move"
+    assert approve(client, checker, response.json()["id"]).status_code == 200
+    db.refresh(member)
+    rows = db.query(MemberAssignment).filter_by(member_id=member.id).order_by(MemberAssignment.effective_from).all()
+    assert [(r.category_id, r.effective_to) for r in rows] == [(category.id, date(2025, 6, 30)), (mgt.id, None)]
+    assert member.category_id == mgt.id
+
+
+def test_employer_transfer_only_in_umbrella_fund(client, db, maker, checker, setup):
+    fund, scheme, category = setup
+    member = create(client, db, maker, checker, fund, body(scheme, category))
+    other = Scheme(fund_id=fund.id, code="EMP02", name="Other Ltd", contribution_day=14)
+    db.add(other)
+    db.flush()
+    other_cat = _category(db, other, code="ALL")
+    response = _move(client, maker, member, other, other_cat, employee_no="OT-77")
+    assert response.status_code == 202, response.text
+    approve(client, checker, response.json()["id"])
+    db.refresh(member)
+    assert (member.scheme_id, member.employee_no, member.date_joined_employer) == (other.id, "OT-77", date(2025, 7, 1))
+
+    standalone = make_fund(db, maker, checker, fund_type="standalone_dc")
+    s1 = Scheme(fund_id=standalone.id, code="S1", name="Sponsor", contribution_day=10)
+    s2 = Scheme(fund_id=standalone.id, code="S2", name="Second", contribution_day=10)
+    db.add_all([s1, s2])
+    db.flush()
+    c1, c2 = _category(db, s1), _category(db, s2)
+    m2 = create(client, db, maker, checker, standalone, body(s1, c1, id_number="QQ1"))
+    r = _move(client, maker, m2, s2, c2)
+    assert r.status_code == 400 and "umbrella" in r.json()["detail"]
+
+
+def test_move_refused_for_deferred_member(client, db, maker, checker, setup):
+    fund, scheme, category = setup
+    member = create(client, db, maker, checker, fund, body(scheme, category))
+    member.status = MemberStatus.deferred
+    db.flush()
+    assert _move(client, maker, member, scheme, _category(db, scheme, code="MGT")).status_code == 400

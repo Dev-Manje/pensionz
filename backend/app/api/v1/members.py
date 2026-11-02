@@ -18,7 +18,7 @@ from app.models.scheme import Scheme
 from app.schemas.approval import ApprovalOut
 from app.schemas.member import (
     AssignmentOut, BeneficiaryOut, DuplicateOut, EmploymentRecordsOut, KycStatusOut, MemberCreateIn, MemberDetailsIn, MemberOut,
-    MemberSummaryOut, NominationIn, NominationOut, NominationsOut, SalaryIn, SalaryOut, ServiceIn, ServicePeriodOut, StatusChangeIn,
+    MemberSummaryOut, MoveIn, NominationIn, NominationOut, NominationsOut, SalaryIn, SalaryOut, ServiceIn, ServicePeriodOut, StatusChangeIn,
     StatusChangeOut,
 )
 from app.services import fund_access
@@ -157,6 +157,12 @@ def update_member(member_id: uuid.UUID, payload: MemberDetailsIn, db: Session = 
 def change_status(member_id: uuid.UUID, payload: StatusChangeIn, db: Session = Depends(get_db), user: User = Depends(maker)) -> ApprovalOut:
     """Proposes a status change (FR-MEM-005); a member checker approves it."""
     return to_out(db, service.propose_status(db, user, get_member(db, user, member_id), payload), user)
+
+
+@router.post("/members/{member_id}/move", response_model=ApprovalOut, status_code=status.HTTP_202_ACCEPTED)
+def move_member(member_id: uuid.UUID, payload: MoveIn, db: Session = Depends(get_db), user: User = Depends(maker)) -> ApprovalOut:
+    """Proposes a category move or a transfer to another employer in the umbrella fund (FR-MEM-010)."""
+    return to_out(db, service.propose_move(db, user, get_member(db, user, member_id), payload), user)
 
 
 # ---- beneficiaries, salary and service (FR-MEM-008, 009)

@@ -12,7 +12,7 @@ district names…) with the raw values under `_values`, and any possible
 duplicates found across all funds (FR-MEM-011)."""
 import re
 import uuid
-from datetime import date
+from datetime import date, timedelta
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, or_, select
@@ -26,14 +26,15 @@ from app.models.kyc import ClientType, DocumentReview, KycApplication, KycDocume
 from app.models.member import AssignmentReason, Member, MemberAssignment, MemberStatus, MemberStatusChange
 from app.models.reference import Bank, BankBranch, Country, District, ReferenceItem, ReferenceList, TraditionalAuthority, Village
 from app.models.scheme import Scheme, SchemeStatus
-from app.schemas.member import MemberCreateIn, MemberDetailsIn, StatusChangeIn
+from app.schemas.member import MemberCreateIn, MemberDetailsIn, MoveIn, StatusChangeIn
 from app.services import approvals, audit, config_resolver, kyc_forms
 from app.services.kyc import today
 
 KIND_NEW = "member_new"
 KIND_UPDATE = "member_update"
 KIND_STATUS = "member_status"
-MEMBER_KINDS = (KIND_NEW, KIND_UPDATE, KIND_STATUS)
+KIND_MOVE = "member_move"
+MEMBER_KINDS = (KIND_NEW, KIND_UPDATE, KIND_STATUS, KIND_MOVE)
 CHECKERS = frozenset({UserRole.member_checker})
 MAKERS = (UserRole.member_admin,)
 
@@ -455,6 +456,61 @@ def propose_status(db: Session, maker: User, member: Member, data: StatusChangeI
     return request
 
 
+def current_assignment(db: Session, member_id: uuid.UUID) -> MemberAssignment | None:
+    return db.execute(select(MemberAssignment).where(MemberAssignment.member_id == member_id, MemberAssignment.effective_to.is_(None))
+                      .order_by(MemberAssignment.effective_from.desc()).limit(1)).scalar_one_or_none()
+
+
+MOVABLE = frozenset({MemberStatus.active, MemberStatus.inactive})
+
+
+def _check_move(db: Session, member: Member, data: MoveIn) -> AssignmentReason:
+    fund = db.get(Fund, member.fund_id)
+    if fund.fund_type in NO_EMPLOYER_FUNDS:
+        raise _bad("Members of this fund have no employer or category to move between")
+    if member.status not in MOVABLE:
+        raise _bad(f"Only active or inactive members can move (this member is {STATUS_LABELS[member.status].lower()})")
+    if data.scheme_id == member.scheme_id and data.category_id == member.category_id:
+        raise _bad("The member is already in that employer and category")
+    transfer = data.scheme_id != member.scheme_id
+    if transfer and fund.fund_type != FundType.umbrella_dc:
+        raise _bad("Members move between employers only within an umbrella fund")
+    if data.effective_date > today():
+        raise _bad("The move can't take effect in the future")
+    current = current_assignment(db, member.id)
+    start = current.effective_from if current else member.date_joined_fund
+    if data.effective_date <= start:
+        raise _bad(f"The move must take effect after {start:%d %b %Y}, when the current employer and category started")
+    _check_employment(db, fund, data.scheme_id, data.category_id, data.effective_date, member.date_of_birth, new=False)
+    scheme, category = db.get(Scheme, data.scheme_id), db.get(BenefitCategory, data.category_id)
+    if scheme.status != SchemeStatus.active:
+        raise _bad(f"Employer {scheme.code} isn't active")
+    if category.status != CategoryStatus.active:
+        raise _bad(f"Category {category.code} is closed")
+    return AssignmentReason.employer_transfer if transfer else AssignmentReason.category_move
+
+
+def propose_move(db: Session, maker: User, member: Member, data: MoveIn) -> ApprovalRequest:
+    reason = _check_move(db, member, data)
+    names = labels(db, {"scheme_id": data.scheme_id, "category_id": data.category_id})
+    now = labels(db, {"scheme_id": member.scheme_id, "category_id": member.category_id})
+    word = "Transfer" if reason == AssignmentReason.employer_transfer else "Category move"
+    request = approvals.submit(
+        db, maker, KIND_MOVE, entity_type="member", entity_id=member.id,
+        summary=f"{word} for {member.account_code} {member.full_name} to {names['scheme_id'].split(' — ')[0]} / {names['category_id'].split(' — ')[0]}",
+        payload={"action": reason.value, "employer": names["scheme_id"], "category": names["category_id"],
+                 "effective_date": data.effective_date.strftime("%d %b %Y").lstrip("0"),
+                 "employee_no": data.employee_no or member.employee_no, "reason": data.reason,
+                 "_values": audit._jsonable(data.model_dump())},
+        previous={"employer": now["scheme_id"], "category": now["category_id"], "effective_date": None,
+                  "employee_no": member.employee_no, "reason": None},
+        fund_id=member.fund_id,
+    )
+    db.commit()
+    db.refresh(request)
+    return request
+
+
 # ---- apply on approval
 
 
@@ -539,8 +595,28 @@ def _apply_status(db: Session, request: ApprovalRequest, checker: User) -> None:
                                         "reason": change.reason}), fund_id=member.fund_id)
 
 
+def _apply_move(db: Session, request: ApprovalRequest, checker: User) -> None:
+    member = _lock(db, request)
+    data = MoveIn(**request.payload["_values"])
+    reason = _check_move(db, member, data)
+    before = {"scheme_id": member.scheme_id, "category_id": member.category_id, "employee_no": member.employee_no}
+    current = current_assignment(db, member.id)
+    if current is not None:
+        current.effective_to = data.effective_date - timedelta(days=1)
+    db.add(MemberAssignment(member_id=member.id, scheme_id=data.scheme_id, category_id=data.category_id, effective_from=data.effective_date,
+                            reason=reason, note=data.reason, approved_by_user_id=checker.id))
+    member.scheme_id, member.category_id = data.scheme_id, data.category_id
+    if reason == AssignmentReason.employer_transfer:
+        member.date_joined_employer = data.effective_date
+    if data.employee_no:
+        member.employee_no = data.employee_no
+    db.flush()
+    audit.record(db, checker.id, "member", member.id, reason.value, before=audit._jsonable(before),
+                 after=audit._jsonable({**data.model_dump()}), fund_id=member.fund_id)
+
+
 for _kind, _label, _apply in ((KIND_NEW, "New member", _apply_new), (KIND_UPDATE, "Member data correction", _apply_update),
-                              (KIND_STATUS, "Member status change", _apply_status)):
+                              (KIND_STATUS, "Member status change", _apply_status), (KIND_MOVE, "Member move / transfer", _apply_move)):
     approvals.register(approvals.ApprovalKind(name=_kind, label=_label, checker_roles=CHECKERS, apply=_apply))
 
 
