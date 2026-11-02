@@ -96,6 +96,12 @@ class ApplicationOut(ApplicationSummary):
     problems: list[str]
     # Staff only: existing clients with the same name or identifier.
     possible_duplicates: list[PartyRef]
+    # A change to an approved client: answers that differ from the last approved application (field names).
+    changed_fields: list[str] = []
+    # Made from the principal officer portal for this employer.
+    scheme_id: uuid.UUID | None = None
+    # Refreshes an approved client (a change of details) rather than onboarding a new one.
+    is_change: bool = False
     can_edit: bool
     can_start_review: bool
     can_review: bool

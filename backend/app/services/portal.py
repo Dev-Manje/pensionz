@@ -18,9 +18,10 @@ from app.models.contribution import (
 )
 from app.models.fund import Fund
 from app.models.identity import User, UserRole
+from app.models.kyc import ClientType, KycApplication, Party
 from app.models.member import Member
 from app.models.scheme import Scheme, SchemeOfficer
-from app.services import arrears, periods, receipts
+from app.services import arrears, kyc, kyc_forms, periods, receipts
 
 ZERO = Decimal("0")
 
@@ -170,4 +171,64 @@ def dashboard(db: Session, user: User, as_at: date) -> dict:
             for s, f in pairs
         ],
         "activity": recent_activity(db, [s.id for s, _ in pairs], as_at),
+    }
+
+
+# ---- organisation details & KYC (FR-PRT-002) -------------------------------------------
+
+REVIEW_SOON_DAYS = 60
+DETAIL_FIELDS = (
+    ("entity_name", "Organisation name"), ("group_name", "Group name"), ("registration_number", "Registration number"),
+    ("tpin", "TPIN"), ("office_phone", "Office phone"), ("phone", "Phone"), ("email", "Email"),
+    ("physical_address", "Physical address"), ("postal_address", "Postal address"),
+    ("contact_name", "Contact person"), ("contact_phone", "Contact person's phone"), ("contact_email", "Contact person's email"),
+)
+
+
+def _application_row(db: Session, app: KycApplication) -> dict:
+    return {"id": app.id, "reference": app.reference, "status": app.status, "is_change": kyc.is_change(db, app),
+            "submitted_at": app.submitted_at, "decided_at": app.decided_at, "review_note": app.review_note,
+            "decision_reason": app.decision_reason, "updated_at": app.updated_at}
+
+
+def _state(days: int | None, overdue: str) -> str | None:
+    if days is None:
+        return None
+    return overdue if days < 0 else "due_soon" if days <= REVIEW_SOON_DAYS else "current"
+
+
+def organisation(db: Session, scheme: Scheme, as_at: date) -> dict:
+    """What we hold about the employer as a client: the approved details, the documents
+    and their expiry, when the next KYC review is due, and any application in progress."""
+    party = db.get(Party, scheme.party_id) if scheme.party_id else None
+    approved = db.get(KycApplication, party.latest_application_id) if party and party.latest_application_id else None
+    data = approved.data if approved else {}
+    people_key = "signatories" if approved and approved.client_type == ClientType.group else "directors"
+    documents = []
+    if approved:
+        current = {d.requirement: d for d in kyc.current_documents(approved)}
+        for slot in kyc_forms.slots(approved.client_type, approved.data):
+            doc = current.get(slot.key)
+            if doc is None:
+                continue
+            documents.append({
+                "label": slot.label,
+                "type_label": doc.doc_type_other or next((t.label for t in slot.requirement.types if t.code == doc.doc_type), doc.doc_type),
+                "issue_date": doc.issue_date, "expiry_date": doc.expiry_date,
+                "state": _state((doc.expiry_date - as_at).days if doc.expiry_date else None, "expired"),
+            })
+    applications = kyc.scheme_applications(db, scheme)
+    in_progress = next((a for a in applications if a.status in kyc.OPEN), None)
+    return {
+        "scheme_id": scheme.id, "scheme_name": scheme.name, "has_client": party is not None,
+        "approved_at": party.kyc_approved_at if party else None, "review_due": party.kyc_review_due if party else None,
+        "review_state": _state((party.kyc_review_due - as_at).days if party else None, "overdue"),
+        "approved_reference": approved.reference if approved else None,
+        "details": [{"label": label, "value": str(data[key])} for key, label in DETAIL_FIELDS if data.get(key) not in (None, "")],
+        "people_title": "Signatories" if people_key == "signatories" else "Directors and senior managers",
+        "people": [{"name": p.get("full_name") or "—", "role": p.get("position") or p.get("occupation")}
+                   for p in (data.get(people_key) or []) if isinstance(p, dict)],
+        "documents": documents,
+        "in_progress": _application_row(db, in_progress) if in_progress else None,
+        "history": [_application_row(db, a) for a in applications if a is not in_progress][:10],
     }

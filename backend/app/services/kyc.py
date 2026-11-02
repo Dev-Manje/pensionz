@@ -11,13 +11,14 @@ Who does what
 - Approval creates or refreshes the `Party` with its next KYC review date
   (regulatory parameters kyc_review_years_<rating>).
 """
+import copy
 import hashlib
 import uuid
 from datetime import date
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, or_, select, text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, object_session
 
 from app.core import storage
 from app.models.identity import User, UserRole
@@ -25,6 +26,7 @@ from app.models.kyc import (
     ApplicationStatus, ClientType, DeclarationVersion, DocumentReview, KycApplication, KycDocument, Party, RiskRating,
 )
 from app.models.mixins import utcnow
+from app.models.scheme import Scheme, SchemeOfficer
 from app.services import audit, config_resolver, kyc_forms, notifications
 
 CAPTURE_ROLES = (UserRole.compliance, UserRole.relationship_manager, UserRole.member_admin)
@@ -54,16 +56,32 @@ def is_staff_reader(user: User) -> bool:
     return user.has_any_role(*READ_ROLES)
 
 
+def _officer_scheme_ids(user: User):
+    return select(SchemeOfficer.scheme_id).where(SchemeOfficer.user_id == user.id)
+
+
 def visible_query(user: User):
     query = select(KycApplication)
     if not is_staff_reader(user):
-        query = query.where(KycApplication.applicant_user_id == user.id)
+        # Portal: their own applications, and any made for an employer they act for.
+        query = query.where(or_(KycApplication.applicant_user_id == user.id, KycApplication.scheme_id.in_(_officer_scheme_ids(user))))
     return query
+
+
+def acts_for(user: User, app: KycApplication) -> bool:
+    """The portal applicant, or another principal officer of the employer the application is for."""
+    if app.applicant_user_id == user.id:
+        return True
+    if app.scheme_id is None or not user.has_role(UserRole.principal_officer):
+        return False
+    return object_session(app).execute(
+        select(SchemeOfficer.id).where(SchemeOfficer.scheme_id == app.scheme_id, SchemeOfficer.user_id == user.id)
+    ).first() is not None
 
 
 def get_visible(db: Session, user: User, application_id: uuid.UUID) -> KycApplication:
     app = db.get(KycApplication, application_id)
-    if app is None or not (is_staff_reader(user) or app.applicant_user_id == user.id):
+    if app is None or not (is_staff_reader(user) or acts_for(user, app)):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Application not found")
     return app
 
@@ -71,7 +89,14 @@ def get_visible(db: Session, user: User, application_id: uuid.UUID) -> KycApplic
 def can_edit(user: User, app: KycApplication) -> bool:
     if app.status not in EDITABLE:
         return False
-    return app.applicant_user_id == user.id or (app.applicant_user_id is None and user.has_any_role(*CAPTURE_ROLES))
+    if app.applicant_user_id is None:
+        return user.has_any_role(*CAPTURE_ROLES)
+    return acts_for(user, app)
+
+
+def applicant_link(app: KycApplication) -> str:
+    """Where the applicant opens the application: the portal for officers, the KYC screen for staff."""
+    return f"/po/kyc/{app.id}" if app.applicant_user_id and app.client_type != ClientType.individual else f"/kyc/{app.id}"
 
 
 def _require_edit(user: User, app: KycApplication) -> None:
@@ -283,7 +308,7 @@ def return_to_applicant(db: Session, user: User, app: KycApplication, note: str)
     audit.record(db, user.id, "kyc_application", app.id, "returned", after={"note": app.review_note})
     who = _applicant_or_capturer(db, app)
     if who:
-        notifications.notify_kyc_returned(db, who, app.reference, app.review_note, app.id)
+        notifications.notify_kyc_returned(db, who, app.reference, app.review_note, app.id, applicant_link(app))
     db.commit()
     db.refresh(app)
     return app
@@ -314,9 +339,20 @@ def _approve(db: Session, user: User, app: KycApplication) -> None:
     party.latest_application_id = app.id
     app.status, app.decided_by_user_id, app.decided_at = ApplicationStatus.approved, user.id, now
     audit.record(db, user.id, "kyc_application", app.id, "approved", after={"party_id": party.id, "review_due": due, "risk": app.risk_rating.value})
+    _link_scheme(db, user, app, party)
     who = _applicant_or_capturer(db, app)
     if who:
-        notifications.notify_kyc_decided(db, who, app.reference, True, None, app.id)
+        notifications.notify_kyc_decided(db, who, app.reference, True, None, app.id, applicant_link(app))
+
+
+def _link_scheme(db: Session, user: User, app: KycApplication, party: Party) -> None:
+    """An employer's first approved KYC from the portal links the employer to the client.
+    The compliance approval is the check; an employer already linked keeps its client."""
+    scheme = db.get(Scheme, app.scheme_id) if app.scheme_id else None
+    if scheme is None or scheme.party_id is not None or app.client_type == ClientType.individual:
+        return
+    scheme.party_id = party.id
+    audit.record(db, user.id, "scheme", scheme.id, "client_linked", after={"party_id": party.id, "kyc_application": app.reference})
 
 
 def approve(db: Session, user: User, app: KycApplication, note: str | None, risk_override: RiskRating | None) -> KycApplication:
@@ -366,7 +402,7 @@ def _reject(db: Session, user: User, app: KycApplication, reason: str | None) ->
     audit.record(db, user.id, "kyc_application", app.id, "rejected", after={"reason": app.decision_reason})
     who = _applicant_or_capturer(db, app)
     if who:
-        notifications.notify_kyc_decided(db, who, app.reference, False, app.decision_reason, app.id)
+        notifications.notify_kyc_decided(db, who, app.reference, False, app.decision_reason, app.id, applicant_link(app))
 
 
 def reject(db: Session, user: User, app: KycApplication, reason: str) -> KycApplication:
@@ -390,3 +426,93 @@ def possible_duplicates(db: Session, app: KycApplication) -> list[Party]:
     return list(db.execute(
         select(Party).where(Party.client_type == app.client_type, or_(*conditions), Party.id != (app.party_id or uuid.uuid4())).limit(10)
     ).scalars())
+
+
+# ---- principal officer portal: the employer's own KYC and changes to it (FR-PRT-002)
+
+OPEN = (ApplicationStatus.draft, ApplicationStatus.submitted, ApplicationStatus.in_review, ApplicationStatus.returned,
+        ApplicationStatus.awaiting_senior_approval)
+
+
+def scheme_applications(db: Session, scheme: Scheme) -> list[KycApplication]:
+    """Applications for this employer: made from the portal, or refreshing its linked client."""
+    condition = KycApplication.scheme_id == scheme.id
+    if scheme.party_id:
+        condition = or_(condition, KycApplication.party_id == scheme.party_id)
+    return list(db.execute(select(KycApplication).where(condition).order_by(KycApplication.created_at.desc()).limit(30)).scalars())
+
+
+def open_application(db: Session, scheme: Scheme) -> KycApplication | None:
+    return next((a for a in scheme_applications(db, scheme) if a.status in OPEN), None)
+
+
+def start_for_scheme(db: Session, user: User, scheme: Scheme) -> KycApplication:
+    """A principal officer starts the employer's KYC, or a change to it.
+
+    A change starts from the last approved answers, with the accepted documents
+    carried over (pending review again) so only what changed needs uploading."""
+    current = open_application(db, scheme)
+    if current is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, f"{current.reference} is already in progress for this employer — continue that one")
+    party = db.get(Party, scheme.party_id) if scheme.party_id else None
+    base = db.get(KycApplication, party.latest_application_id) if party and party.latest_application_id else None
+    client_type = base.client_type if base else ClientType.corporate
+    data = copy.deepcopy(base.data) if base else {"entity_name": scheme.name}
+    app = KycApplication(
+        reference=_reference(db), client_type=client_type, data=data, display_name=kyc_forms.display_name(client_type, data),
+        applicant_user_id=user.id, scheme_id=scheme.id, party_id=party.id if party else None,
+    )
+    db.add(app)
+    db.flush()
+    carried = 0
+    for doc in current_documents(base) if base else []:
+        if doc.review_status != DocumentReview.accepted:
+            continue
+        db.add(KycDocument(
+            application_id=app.id, requirement=doc.requirement, doc_type=doc.doc_type, doc_type_other=doc.doc_type_other,
+            issue_date=doc.issue_date, expiry_date=doc.expiry_date, storage_key=doc.storage_key, filename=doc.filename,
+            content_type=doc.content_type, size_bytes=doc.size_bytes, sha256=doc.sha256,
+            uploaded_by_user_id=doc.uploaded_by_user_id, uploaded_at=doc.uploaded_at,
+        ))
+        carried += 1
+    audit.record(db, user.id, "kyc_application", app.id, "created",
+                 after={"reference": app.reference, "scheme_id": scheme.id, "change_of": base.reference if base else None,
+                        "documents_carried_over": carried})
+    db.commit()
+    db.refresh(app)
+    return app
+
+
+def is_change(db: Session, app: KycApplication) -> bool:
+    """A change to an approved client — not its first KYC (approval sets party_id on both)."""
+    if app.party_id is None:
+        return False
+    earlier = select(KycApplication.id).where(
+        KycApplication.party_id == app.party_id, KycApplication.id != app.id, KycApplication.status == ApplicationStatus.approved,
+        KycApplication.created_at < app.created_at,
+    )
+    return db.execute(earlier.limit(1)).first() is not None
+
+
+def _flat(data: dict) -> dict:
+    out = {}
+    for key, value in data.items():
+        if isinstance(value, dict):
+            out.update({f"{key}.{k}": v for k, v in value.items()})
+        else:
+            out[key] = value
+    return out
+
+
+def changed_fields(db: Session, app: KycApplication) -> list[str]:
+    """Answers that differ from the client's last approved application (a change request), by field name;
+    a changed director / signatory list is reported once under the list's name."""
+    party = db.get(Party, app.party_id) if app.party_id else None
+    if party is None or not party.latest_application_id or party.latest_application_id == app.id:
+        return []
+    base = db.get(KycApplication, party.latest_application_id)
+    if base is None:
+        return []
+    old, new = _flat(base.data or {}), _flat(app.data or {})
+    blank = lambda v: v in (None, "", [], {})  # noqa: E731
+    return sorted(k for k in set(old) | set(new) if not (blank(old.get(k)) and blank(new.get(k))) and old.get(k) != new.get(k))

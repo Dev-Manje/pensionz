@@ -264,3 +264,14 @@ export function isShown(field: FieldDef, data: Record<string, unknown>): boolean
   if (field.showIf.in.includes("__foreign__")) return !!value && value !== "MW";
   return field.showIf.in.includes(value);
 }
+
+// The form's label for a stored answer ("contact_name", "next_of_kin.name", or a
+// director / signatory list as a whole) — used to list what a change request changes.
+export function fieldLabel(type: ClientType, name: string): string {
+  for (const step of KYC_STEPS[type]) {
+    const field = step.fields?.find((f) => f.name === name);
+    if (field) return field.label;
+    if (step.people?.name === name) return step.title;
+  }
+  return name.replace(/[._]/g, " ");
+}

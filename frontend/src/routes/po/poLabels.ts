@@ -1,4 +1,4 @@
-import type { RemittanceStage } from "../../api/types";
+import type { ExpiryState, KycStatus, RemittanceStage } from "../../api/types";
 import type { StatusTone } from "../../utils/labels";
 
 // Plain-language stage of this month's remittance, with what happens next.
@@ -26,3 +26,22 @@ export function dueText(daysToDue: number): string {
 export function isLate(stage: RemittanceStage, daysToDue: number): boolean {
   return stage !== "allocated" && daysToDue < 0;
 }
+
+// KYC application status in the officer's words. Senior approval is compliance's
+// internal step (it means high risk), so the officer just sees "Being reviewed".
+export const KYC_STATUS_TEXT: Record<KycStatus, { label: string; tone: StatusTone }> = {
+  draft: { label: "Not sent yet", tone: "default" },
+  submitted: { label: "Sent — waiting for review", tone: "info" },
+  in_review: { label: "Being reviewed", tone: "info" },
+  awaiting_senior_approval: { label: "Being reviewed", tone: "info" },
+  returned: { label: "Needs changes", tone: "warning" },
+  approved: { label: "Approved", tone: "success" },
+  rejected: { label: "Not approved", tone: "error" },
+};
+
+export const EXPIRY_TEXT: Record<ExpiryState, { label: string; tone: StatusTone }> = {
+  current: { label: "Up to date", tone: "success" },
+  due_soon: { label: "Due soon", tone: "warning" },
+  expired: { label: "Expired", tone: "error" },
+  overdue: { label: "Overdue", tone: "error" },
+};

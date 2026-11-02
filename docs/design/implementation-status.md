@@ -482,3 +482,23 @@ used_at).
   number), notice not confirmed (with the reason), schedule sent, contributions credited, allocation taken back.
 - Frontend `/po`: summary alert (employers late this month, total arrears), one card per employer grouped by fund with a
   remittance panel (plain-language stage + what happens next, `routes/po/poLabels.ts`) and an arrears panel; activity list.
+
+### Organisation KYC from the portal (FR-PRT-002) — 2026-11-02
+
+- `kyc_application.scheme_id` (migration `e4b7c2d91a36`): an application made from the portal for an employer. Every
+  principal officer linked to that employer can see and edit it (`kyc.acts_for`); other officers get 404.
+- `POST /po/schemes/{id}/kyc` (`kyc.start_for_scheme`): the employer's first KYC (prefilled with its name), or — once
+  the employer is linked to an approved client — a change of details: the last approved answers copied, the accepted
+  documents carried over as new rows (same stored file, review pending), `party_id` set so approval refreshes the
+  same client. One open application per employer (409).
+- Compliance reviews it as any other application; `changed_fields` lists the answers that differ from the last
+  approved application, shown on the staff review screen. `is_change` = the client had an earlier approved application.
+- Approval of an employer's first portal KYC sets `scheme.party_id` (audited `client_linked`); an employer already
+  linked keeps its client.
+- Applicants never see the risk rating, its reasons, the reviewer or the client record. Notifications to portal
+  applicants link to `/po/kyc/<id>`.
+- `GET /setup/lists/{name}`: portal users may read the lists the KYC forms use (`PORTAL_LISTS`), nothing else.
+- `GET /po/schemes/{id}/organisation`: approved details, directors/signatories, documents with expiry state, review
+  due (due soon = within 60 days), in-progress application and history.
+- Frontend: `/po` routes (`PoPortal.tsx`) — dashboard, `/po/schemes/<id>` employer page (tabs, employer switcher for
+  officers of several employers), `/po/kyc/<id>`.

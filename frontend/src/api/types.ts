@@ -749,6 +749,11 @@ export interface KycApplication extends KycSummary {
   slots: KycSlot[];
   problems: string[];
   possible_duplicates: PartyRef[];
+  // A change to an approved client: answers that differ from the last approved application.
+  changed_fields: string[];
+  // Made from the principal officer portal for this employer.
+  scheme_id: string | null;
+  is_change: boolean;
   can_edit: boolean;
   can_start_review: boolean;
   can_review: boolean;
@@ -982,4 +987,36 @@ export interface MemberImportRow {
 export interface MemberImport extends MemberImportSummary {
   rows: MemberImportRow[];
   can_submit: boolean;
+}
+
+// ---- Principal officer portal: the employer's organisation details & KYC (FR-PRT-002)
+
+export interface PortalKycApplication {
+  id: string;
+  reference: string;
+  status: KycStatus;
+  is_change: boolean;
+  submitted_at: string | null;
+  decided_at: string | null;
+  review_note: string | null;
+  decision_reason: string | null;
+  updated_at: string;
+}
+
+export type ExpiryState = "current" | "due_soon" | "expired" | "overdue";
+
+export interface Organisation {
+  scheme_id: string;
+  scheme_name: string;
+  has_client: boolean;
+  approved_at: string | null;
+  review_due: string | null;
+  review_state: ExpiryState | null;
+  approved_reference: string | null;
+  details: { label: string; value: string }[];
+  people_title: string;
+  people: { name: string; role: string | null }[];
+  documents: { label: string; type_label: string; issue_date: string | null; expiry_date: string | null; state: ExpiryState | null }[];
+  in_progress: PortalKycApplication | null;
+  history: PortalKycApplication[];
 }

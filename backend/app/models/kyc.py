@@ -88,6 +88,9 @@ class KycApplication(UUIDPKMixin, TimestampMixin, Base):
     applicant_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=True, index=True)
     # Refreshing an existing client's KYC.
     party_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("party.id"), nullable=True, index=True)
+    # Made from the principal officer portal for this employer: every officer of the employer may
+    # see and finish it, and approval links the employer to the client if it isn't linked yet.
+    scheme_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("scheme.id"), nullable=True, index=True)
 
     declaration_version_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("declaration_version.id"), nullable=True)
     declaration_accepted_by: Mapped[str | None] = mapped_column(String(200), nullable=True)

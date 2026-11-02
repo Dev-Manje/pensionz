@@ -1,3 +1,4 @@
+import { Link as RouterLink } from "react-router-dom";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -15,6 +16,7 @@ import { formatDate, formatDateTime, formatPeriod } from "../../utils/date";
 import { formatMoney } from "../../utils/format";
 import { dueDayLabel } from "../staff/funds/schemes/schemeLabels";
 import { STAGE_TEXT, dueText, isLate } from "./poLabels";
+import { schemePath } from "./PoSchemePage";
 
 const SCHEME_STATUS_TEXT: Record<DashboardScheme["status"], string> = {
   active: "Active",
@@ -140,9 +142,12 @@ function SchemeCard({ scheme }: { scheme: DashboardScheme }) {
             {dueDayLabel(scheme.contribution_day)}
           </Typography>
         </div>
-        {scheme.status !== "active" && (
-          <StatusChip status={scheme.status} label={SCHEME_STATUS_TEXT[scheme.status]} sx={{ alignSelf: { xs: "flex-start", sm: "center" } }} />
-        )}
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+          {scheme.status !== "active" && <StatusChip status={scheme.status} label={SCHEME_STATUS_TEXT[scheme.status]} />}
+          <Button component={RouterLink} to={schemePath(scheme.id)} variant="outlined" size="small">
+            Open
+          </Button>
+        </Stack>
       </Stack>
       <Stack direction={{ xs: "column", md: "row" }} spacing={1.5}>
         <Remittance scheme={scheme} />

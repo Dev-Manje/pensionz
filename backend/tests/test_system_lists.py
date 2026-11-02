@@ -118,5 +118,8 @@ def test_access(client, db, maker):
     assert client.get(f"{BASE}/countries", headers=auth_headers(finance)).status_code == 200
     assert propose(client, finance, "districts", {"name": "Y District", "region": "central"}).status_code == 403
     po = make_user(db, UserRole.principal_officer)
-    assert client.get(f"{BASE}/countries", headers=auth_headers(po)).status_code == 403
+    # Portal users read only the lists their KYC forms use.
+    assert client.get(f"{BASE}/countries", headers=auth_headers(po)).status_code == 200
+    assert client.get(f"{BASE}/transaction_types", headers=auth_headers(po)).status_code == 403
+    assert propose(client, po, "countries", {"code": "XX", "name": "X"}).status_code == 403
     assert client.get(f"{BASE}/nope", headers=auth_headers(maker)).status_code == 404

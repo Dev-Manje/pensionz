@@ -208,7 +208,7 @@ Open — the default in *italics* is what we build to until answered (from REQUI
 - [x] KYC expiry dates + reminders job. FR-ONB-104 — done 2026-11-02: review due date from the risk rating
       (regulatory parameters `kyc_review_years_*`), daily job `kyc_expiry_reminders` (07:00; 30/7/0 days,
       weekly when overdue) → compliance digest + applicant notice for expiring documents; KYC tab "Expiring".
-- [ ] Portal KYC (principal officer for the organisation, individual self-service) — the API already lets
+- [ ] Portal KYC (principal officer for the organisation — done in Phase 5; individual self-service in Phase 7) — the API already lets
       portal users own their drafts; screens come with Phases 5 and 7. Portal users also need read access to
       the reference lists the form uses (currently staff-only `/setup/lists`).
 
@@ -318,7 +318,14 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       next step; arrears totals (overdue months, oldest, interest); activity feed (90 days, 12 items) across all the
       officer's employers. pytest 12 new (`test_po_dashboard.py`), vitest 2, curl incl. 403, screenshots 1440/820/390
       viewed. Follow-up: links from the cards/activity to remittance pages once those exist (next tasks).
-- [ ] Organisation KYC from the portal (reuse Phase 2 forms) and change requests.
+- [x] Organisation KYC from the portal (reuse Phase 2 forms) and change requests. FR-PRT-002 — done 2026-11-02, see
+      `kyc.start_for_scheme`, `portal.organisation`, `POST /po/schemes/{id}/kyc`, `routes/po/PoOrganisation.tsx`,
+      `PoKycPage.tsx` (same stepper as staff): employer page `/po/schemes/<id>` with an "Organisation & KYC" tab —
+      approved details, directors, documents with expiry, review due date, history; first KYC or "Change details"
+      (prefilled from the approved answers, accepted documents carried over pending review, one open per employer, any
+      officer of the employer can finish it); compliance sees "Changed since the last approval"; the employer's first
+      approval links it to the client; risk rating hidden from applicants; KYC form lists readable by portal users.
+      pytest 4 new, live smoke 22/22 (MinIO), screenshots 1440/390 viewed.
 - [ ] Remit contributions: upload/capture schedule, attach proof of payment, see validation errors per
       row, submit → staff allocation queue; history with allocation status. Payment notice = `receipts.submit_notice`
       (built in Phase 4; officer is told "received, pending confirmation"); links in notifications use `/po/remittances/<id>`.

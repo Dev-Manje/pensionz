@@ -45,7 +45,7 @@ import { KycPage } from "./staff/kyc/KycPage";
 import { MembersPage } from "./staff/members/MembersPage";
 import { ContributionsPage } from "./staff/contributions/ContributionsPage";
 import { MemberHome } from "./member/MemberHome";
-import { PoHome } from "./po/PoHome";
+import { PoPortal } from "./po/PoPortal";
 import { ROLE_LABELS, STAFF_ROLES } from "../api/types";
 import { BRAND } from "../brand";
 import type { UserRole } from "../api/types";
@@ -72,7 +72,7 @@ const PORTAL_PATHS = ["member", "po"];
 // payments, accounting and reports here (pz-frontend-architecture).
 const SECTIONS: Section[] = [
   { path: "member", label: "My pension", icon: <SavingsOutlinedIcon />, roles: ["member", "individual"], element: <MemberHome /> },
-  { path: "po", label: "My schemes", icon: <BusinessOutlinedIcon />, roles: ["principal_officer"], element: <PoHome /> },
+  { path: "po", label: "My schemes", icon: <BusinessOutlinedIcon />, roles: ["principal_officer"], element: <PoPortal /> },
   { path: "home", label: "Home", icon: <HomeOutlinedIcon />, roles: STAFF_ROLES, element: <StaffHome /> },
   { path: "approvals", label: "Approvals", icon: <CheckCircleOutlineIcon />, roles: STAFF_ROLES, element: <ApprovalsPage /> },
   { path: "kyc", label: "KYC", icon: <FactCheckOutlinedIcon />, roles: ["compliance", "relationship_manager", "member_admin", "admin", "auditor"], element: <KycPage /> },

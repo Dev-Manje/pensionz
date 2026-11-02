@@ -121,10 +121,10 @@ def notify_kyc_submitted(db: Session, reviewers: list[User], reference: str, nam
                 link=f"/kyc/{application_id}", entity_type="kyc_application", entity_id=application_id)
 
 
-def notify_kyc_returned(db: Session, user: User, reference: str, note: str, application_id: uuid.UUID) -> None:
+def notify_kyc_returned(db: Session, user: User, reference: str, note: str, application_id: uuid.UUID, link: str) -> None:
     _notify(db, user, "kyc.returned", "Your KYC application needs changes",
             f"{reference} was sent back: {note} Please update it and submit again.",
-            link=f"/kyc/{application_id}", entity_type="kyc_application", entity_id=application_id)
+            link=link, entity_type="kyc_application", entity_id=application_id)
 
 
 def notify_kyc_senior_approval(db: Session, approvers: list[User], reference: str, name: str, application_id: uuid.UUID) -> None:
@@ -134,11 +134,12 @@ def notify_kyc_senior_approval(db: Session, approvers: list[User], reference: st
                 link=f"/kyc/{application_id}", entity_type="kyc_application", entity_id=application_id)
 
 
-def notify_kyc_decided(db: Session, user: User, reference: str, approved: bool, reason: str | None, application_id: uuid.UUID) -> None:
+def notify_kyc_decided(db: Session, user: User, reference: str, approved: bool, reason: str | None, application_id: uuid.UUID,
+                       link: str) -> None:
     outcome = "approved" if approved else "not approved"
     _notify(db, user, f"kyc.{'approved' if approved else 'rejected'}", f"KYC application {outcome}",
             f"{reference} was {outcome}." + (f" Reason: {reason}" if reason else ""),
-            link=f"/kyc/{application_id}", entity_type="kyc_application", entity_id=application_id)
+            link=link, entity_type="kyc_application", entity_id=application_id)
 
 
 def notify_kyc_expiring_digest(db: Session, staff: list[User], lines: list[str]) -> None:

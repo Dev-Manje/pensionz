@@ -35,11 +35,13 @@ def _party(p: Party) -> PartyRef:
     return PartyRef(id=p.id, name=p.name, identifier=p.identifier, risk_rating=p.risk_rating, kyc_review_due=p.kyc_review_due)
 
 
-def _summary(db: Session, a: KycApplication) -> dict:
+def _summary(db: Session, a: KycApplication, staff: bool = True) -> dict:
+    # The risk rating and its reasons are compliance's working, not shown to applicants.
     return {
         "id": a.id, "reference": a.reference, "client_type": a.client_type, "status": a.status, "display_name": a.display_name,
         "captured_by": _name(db, a.captured_by_user_id), "applicant": _name(db, a.applicant_user_id), "submitted_at": a.submitted_at,
-        "risk_rating": a.risk_rating, "edd_required": a.edd_required, "reviewer": _name(db, a.reviewer_user_id), "updated_at": a.updated_at,
+        "risk_rating": a.risk_rating if staff else None, "edd_required": a.edd_required and staff,
+        "reviewer": _name(db, a.reviewer_user_id) if staff else None, "updated_at": a.updated_at,
     }
 
 
@@ -59,13 +61,14 @@ def _out(db: Session, a: KycApplication, user: User) -> ApplicationOut:
     staff = kyc.is_staff_reader(user)
     declaration = db.get(kyc.DeclarationVersion, a.declaration_version_id) if a.declaration_version_id else None
     return ApplicationOut(
-        **_summary(db, a), data=a.data, risk_reasons=a.risk_reasons, review_note=a.review_note,
+        **_summary(db, a, staff), data=a.data, risk_reasons=a.risk_reasons if staff else [], review_note=a.review_note,
         recommended_by=_name(db, a.recommended_by_user_id), decided_by=_name(db, a.decided_by_user_id), decided_at=a.decided_at,
         decision_reason=a.decision_reason, declaration_accepted_by=a.declaration_accepted_by, declaration_accepted_at=a.declaration_accepted_at,
         declaration_version=declaration.version if declaration else None,
-        party=_party(db.get(Party, a.party_id)) if a.party_id else None,
+        party=_party(db.get(Party, a.party_id)) if a.party_id and staff else None,
         slots=slots, problems=kyc.check(a) if a.status in kyc.EDITABLE else [],
         possible_duplicates=[_party(p) for p in kyc.possible_duplicates(db, a)] if staff else [],
+        changed_fields=kyc.changed_fields(db, a), scheme_id=a.scheme_id, is_change=kyc.is_change(db, a),
         can_edit=kyc.can_edit(user, a),
         can_start_review=a.status == ApplicationStatus.submitted and user.has_role(kyc.REVIEW_ROLE) and not kyc.took_part(user, a),
         can_review=a.status == ApplicationStatus.in_review and a.reviewer_user_id == user.id,
@@ -102,7 +105,8 @@ def list_applications(status_filter: ApplicationStatus | None = None, q: str | N
         like = f"%{q.strip().lower()}%"
         query = query.where(or_(func.lower(KycApplication.display_name).like(like), func.lower(KycApplication.reference).like(like)))
     rows = db.execute(query.order_by(KycApplication.updated_at.desc()).limit(300)).scalars()
-    return [ApplicationSummary(**_summary(db, a)) for a in rows]
+    staff = kyc.is_staff_reader(user)
+    return [ApplicationSummary(**_summary(db, a, staff)) for a in rows]
 
 
 @router.post("/applications", response_model=ApplicationOut, status_code=status.HTTP_201_CREATED)

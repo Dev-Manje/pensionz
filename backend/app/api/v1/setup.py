@@ -3,7 +3,7 @@ import uuid
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_roles, require_staff
+from app.api.deps import get_current_user, require_roles, require_staff
 from app.api.v1.approvals import to_out
 from app.core.database import get_db
 from app.models.identity import User, UserRole
@@ -21,8 +21,15 @@ def describe_lists(_: User = Depends(require_staff)) -> list[dict]:
     return system_lists.describe()
 
 
+# Lists the KYC forms use, readable by portal users filling one in.
+PORTAL_LISTS = {"countries", "districts", "traditional_authorities", "villages", "id_types", "kyc_products", "permit_types",
+                "relationships", "salutations"}
+
+
 @router.get("/{name}")
-def list_rows(name: str, parent: uuid.UUID | None = None, db: Session = Depends(get_db), _: User = Depends(require_staff)) -> list[dict]:
+def list_rows(name: str, parent: uuid.UUID | None = None, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> list[dict]:
+    if not user.is_staff and name not in PORTAL_LISTS:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "You do not have permission to do this")
     return system_lists.rows(db, system_lists.get_list(name), parent)
 
 

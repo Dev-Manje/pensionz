@@ -20,7 +20,7 @@ import { useListRows } from "../../../queries/setup";
 import { formatDate, formatDateTime } from "../../../utils/date";
 import type { KycApplication, RiskRating } from "../../../api/types";
 import { KycDocuments } from "./KycDocuments";
-import { KYC_STEPS, getPath, isShown, type FieldDef } from "./kycSchema";
+import { KYC_STEPS, fieldLabel, getPath, isShown, type FieldDef } from "./kycSchema";
 
 function useLabel() {
   const options = useKycOptions();
@@ -61,7 +61,7 @@ function useLabel() {
   };
 }
 
-function Answers({ app }: { app: KycApplication }) {
+export function KycAnswers({ app }: { app: KycApplication }) {
   const label = useLabel();
   const data = app.data;
   return (
@@ -203,6 +203,14 @@ export function KycReview({ app }: { app: KycApplication }) {
         </Alert>
       )}
       {app.status === "rejected" && <Alert severity="error">Rejected by {app.decided_by}: {app.decision_reason}</Alert>}
+      {app.party && app.status !== "approved" && (
+        <Alert severity="info">
+          A change to an approved client.{" "}
+          {app.changed_fields.length > 0
+            ? `Changed since the last approval: ${app.changed_fields.map((f) => fieldLabel(app.client_type, f)).join(", ")}.`
+            : "No answers changed since the last approval — check the documents."}
+        </Alert>
+      )}
 
       <Paper sx={{ p: { xs: 2, sm: 3 } }}>
         <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
@@ -263,7 +271,7 @@ export function KycReview({ app }: { app: KycApplication }) {
       <Typography variant="h6" component="h2">
         Details
       </Typography>
-      <Answers app={app} />
+      <KycAnswers app={app} />
 
       {(app.can_review || app.can_senior_decide) && (
         <Paper sx={{ p: 2, position: "sticky", bottom: 0, zIndex: 1 }} elevation={3}>

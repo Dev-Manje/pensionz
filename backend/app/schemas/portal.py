@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
+from app.models.kyc import ApplicationStatus
 from app.models.scheme import BillingFrequency, SchemeStatus
 
 
@@ -67,3 +68,53 @@ class PoDashboardOut(BaseModel):
     as_at: date
     schemes: list[DashboardSchemeOut]
     activity: list[ActivityOut]
+
+
+class PortalKycApplicationOut(BaseModel):
+    id: uuid.UUID
+    reference: str
+    status: ApplicationStatus
+    # A change to details already approved (otherwise the employer's first KYC).
+    is_change: bool
+    submitted_at: datetime | None
+    decided_at: datetime | None
+    review_note: str | None
+    decision_reason: str | None
+    updated_at: datetime
+
+
+class LabelValue(BaseModel):
+    label: str
+    value: str
+
+
+class PortalPersonOut(BaseModel):
+    name: str
+    role: str | None
+
+
+class PortalDocumentOut(BaseModel):
+    label: str
+    type_label: str
+    issue_date: date | None
+    expiry_date: date | None
+    # current | due_soon (within 60 days) | expired; None when the document doesn't expire
+    state: str | None
+
+
+class OrganisationOut(BaseModel):
+    scheme_id: uuid.UUID
+    scheme_name: str
+    # False until the employer's KYC has been approved and linked.
+    has_client: bool
+    approved_at: datetime | None
+    review_due: date | None
+    # current | due_soon (within 60 days) | overdue
+    review_state: str | None
+    approved_reference: str | None
+    details: list[LabelValue]
+    people_title: str
+    people: list[PortalPersonOut]
+    documents: list[PortalDocumentOut]
+    in_progress: PortalKycApplicationOut | None
+    history: list[PortalKycApplicationOut]
