@@ -299,3 +299,73 @@ def _on_reject(db: Session, request: ApprovalRequest, user: User) -> None:
 
 
 approvals.register(approvals.ApprovalKind(name=KIND, label="Allocate contributions", checker_roles=CHECKERS, apply=_apply, on_reject=_on_reject))
+
+
+# ---- reversal (FR-CON-007)
+
+REVERSAL_KIND = "allocation_reversal"
+
+
+def propose_reversal(db: Session, user: User, schedule: ContributionSchedule, reason: str) -> ApprovalRequest:
+    """Asks to undo a posted allocation; a contributions checker approves."""
+    if not reason or len(reason.strip()) < 5:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Say why the allocation has to be reversed")
+    allocation = live_allocation(db, schedule.id)
+    if allocation is None or allocation.status != AllocationStatus.posted:
+        raise HTTPException(status.HTTP_409_CONFLICT, "This schedule has no posted allocation to reverse")
+    _check_balances(db, allocation)
+    scheme = db.get(Scheme, schedule.scheme_id)
+    request = approvals.submit(
+        db, user, REVERSAL_KIND, entity_type="contribution_allocation", entity_id=allocation.id,
+        summary=f"Reverse allocation of {schedule.reference} ({_fmt(allocation.net_to_members)}) for {scheme.code}",
+        payload={"employer": f"{scheme.code} — {scheme.name}", "schedule": schedule.reference,
+                 "month": periods.label(schedule.contribution_month), "members": schedule.line_count,
+                 "taken_back_from_members": _fmt(allocation.net_to_members), "returned_to_unallocated": _fmt(allocation.amount),
+                 "reason": reason.strip()},
+        fund_id=allocation.fund_id,
+    )
+    audit.record(db, user.id, "contribution_allocation", allocation.id, "reversal_requested", after={"reason": reason.strip()},
+                 fund_id=allocation.fund_id)
+    db.commit()
+    db.refresh(request)
+    return request
+
+
+def _check_balances(db: Session, allocation: ContributionAllocation) -> None:
+    """Members must still hold what the allocation credited (nothing paid out since)."""
+    from app.models.ledger import MemberTransaction
+
+    credited = db.execute(select(MemberTransaction).where(MemberTransaction.journal_entry_id == allocation.journal_entry_id)).scalars().all()
+    for t in credited:
+        by_component = ledger.member_balances_by_component(db, t.member_id).get(t.component, {})
+        if sum(by_component.values(), ZERO) < t.amount:
+            member = db.get(Member, t.member_id)
+            raise HTTPException(status.HTTP_409_CONFLICT,
+                                f"{member.account_code} no longer holds {_fmt(t.amount)} of {t.component.value} money — "
+                                "it has been paid out or moved, so this allocation can't be reversed")
+
+
+def _apply_reversal(db: Session, request: ApprovalRequest, checker: User) -> None:
+    from app.models.ledger import JournalEntry
+
+    allocation = db.execute(select(ContributionAllocation).where(ContributionAllocation.id == uuid.UUID(request.entity_id)).with_for_update()).scalar_one()
+    if allocation.status != AllocationStatus.posted:
+        raise HTTPException(status.HTTP_409_CONFLICT, "This allocation isn't posted any more")
+    _check_balances(db, allocation)
+    schedule = db.execute(select(ContributionSchedule).where(ContributionSchedule.id == allocation.schedule_id).with_for_update()).scalar_one()
+    entry = db.get(JournalEntry, allocation.journal_entry_id)
+    reversal = ledger.reverse(db, entry, user=checker, entry_date=receipts.posting_date(db, allocation.fund_id, receipts.today()),
+                              reason=request.payload["reason"])
+    for part in allocation.receipts:
+        r = db.execute(select(ContributionReceipt).where(ContributionReceipt.id == part.receipt_id).with_for_update()).scalar_one()
+        r.allocated_amount -= part.amount
+    allocation.status = AllocationStatus.reversed
+    # Back to "ready": re-open it to correct, then allocate again.
+    schedule.status = ScheduleStatus.ready
+    audit.record(db, checker.id, "contribution_allocation", allocation.id, "reversed",
+                 after={"journal": ledger.entry_ref(reversal), "reason": request.payload["reason"]}, fund_id=allocation.fund_id)
+
+
+approvals.register(approvals.ApprovalKind(
+    name=REVERSAL_KIND, label="Reverse contribution allocation", checker_roles=CHECKERS, apply=_apply_reversal,
+))

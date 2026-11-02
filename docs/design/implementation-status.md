@@ -403,3 +403,12 @@ API: `GET /schedules/{id}/allocation` (plan, candidates with suggested amounts, 
 `POST /schedules/{id}/allocate` ({receipts: [{receipt_id, amount}]} or null = auto).
 Frontend: allocation panel on the schedule page (figures, receipts with editable amounts, "Using X of Y needed",
 send for approval, pending/posted state).
+
+### Allocation reversals (FR-CON-007) — 2026-11-02
+
+`POST /schedules/{id}/reverse-allocation` {reason ≥ 5 chars} (contributions officer) → approval kind `allocation_reversal`
+(contributions checker). Refused (409) when no posted allocation, or when any member's component balance is now below what
+the allocation credited (money paid out or moved since). Apply: `ledger.reverse` mirrors the allocation's entry into the open
+month with type 2 "Reversal Initial Allocation" per member transaction (linked by `reverses_transaction_id`), receipts'
+`allocated_amount` released, allocation `reversed`, schedule back to `ready` (re-open → fix → submit → allocate again).
+The preview returns `pending_reversal_approval_id`; the panel shows "Reverse allocation" / the pending request.

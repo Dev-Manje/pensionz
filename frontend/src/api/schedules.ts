@@ -151,6 +151,7 @@ export interface AllocationPreview {
   available_total: string;
   blocker: string | null;
   allocations: AllocationSummary[];
+  pending_reversal_approval_id: string | null;
 }
 
 export function getAllocationPreview(id: string) {
@@ -159,4 +160,8 @@ export function getAllocationPreview(id: string) {
 
 export function allocateSchedule(id: string, receipts: { receipt_id: string; amount: string }[] | null) {
   return apiFetch<Approval>(`/schedules/${id}/allocate`, { method: "POST", body: JSON.stringify({ receipts }) });
+}
+
+export function reverseAllocation(id: string, reason: string) {
+  return apiFetch<Approval>(`/schedules/${id}/reverse-allocation`, { method: "POST", body: JSON.stringify({ reason }) });
 }

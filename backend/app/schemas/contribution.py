@@ -211,6 +211,7 @@ class AllocationPreviewOut(BaseModel):
     # Why it can't be allocated now (None when it can).
     blocker: str | None
     allocations: list[AllocationOut]
+    pending_reversal_approval_id: uuid.UUID | None = None
 
 
 class AllocationPickIn(BaseModel):
@@ -221,3 +222,7 @@ class AllocationPickIn(BaseModel):
 class AllocateIn(BaseModel):
     # None = take the employer's receipts oldest first.
     receipts: list[AllocationPickIn] | None = None
+
+
+class ReverseIn(BaseModel):
+    reason: str = Field(max_length=2000)

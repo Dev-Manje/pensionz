@@ -10,11 +10,12 @@ from app.api.deps import require_roles, require_staff
 from app.api.v1.approvals import _name, to_out
 from app.core.database import get_db
 from app.models.contribution import ContributionAllocation, ContributionReceipt, ContributionSchedule, ScheduleSource, ScheduleStatus
+from app.models.approval import ApprovalRequest, ApprovalStatus
 from app.models.identity import User
 from app.models.scheme import Scheme
 from app.schemas.approval import ApprovalOut
 from app.schemas.contribution import (
-    AllocateIn, AllocationOut, AllocationPreviewOut, CandidateReceiptOut, FeeLineOut,
+    AllocateIn, AllocationOut, AllocationPreviewOut, CandidateReceiptOut, FeeLineOut, ReverseIn,
     ScheduleCreateIn, ScheduleLineIn, ScheduleLineOut, ScheduleOut, SchedulePage, ScheduleSummaryOut,
 )
 from app.services import allocations, fund_access
@@ -205,6 +206,9 @@ def allocation_preview(schedule_id: uuid.UUID, db: Session = Depends(get_db), us
         candidates=[CandidateReceiptOut(receipt_id=r.id, receipt_number=r.receipt_number, value_date=r.value_date, amount=r.amount,
                                         available=a, suggested=suggested.get(r.id, Decimal("0"))) for r, a in candidates],
         available_total=available_total, blocker=blocker, allocations=[_allocation_out(db, a) for a in history],
+        pending_reversal_approval_id=db.execute(select(ApprovalRequest.id).where(
+            ApprovalRequest.kind == allocations.REVERSAL_KIND, ApprovalRequest.entity_id == str(live.id),
+            ApprovalRequest.status == ApprovalStatus.pending)).scalar() if live is not None else None,
     )
 
 
@@ -214,3 +218,10 @@ def allocate(schedule_id: uuid.UUID, payload: AllocateIn, db: Session = Depends(
     s = get_schedule(db, user, schedule_id)
     picks = [(p.receipt_id, p.amount) for p in payload.receipts] if payload.receipts is not None else None
     return to_out(db, allocations.propose(db, user, s, picks), user)
+
+
+@router.post("/schedules/{schedule_id}/reverse-allocation", response_model=ApprovalOut, status_code=status.HTTP_202_ACCEPTED)
+def reverse_allocation(schedule_id: uuid.UUID, payload: ReverseIn, db: Session = Depends(get_db), user: User = Depends(maker)) -> ApprovalOut:
+    """Asks to reverse the posted allocation (FR-CON-007); a contributions checker approves."""
+    s = get_schedule(db, user, schedule_id)
+    return to_out(db, allocations.propose_reversal(db, user, s, payload.reason), user)

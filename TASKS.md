@@ -278,7 +278,10 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       pytest 8 new (known answers), live run on dev UMB01 (ledger ties), screenshots 1440 + 390 viewed.
       Gaps: DB-fund contributions (Dr 1000 / Cr 4000) refused until DB administration; per-employer mismatch rules
       (refund / carry forward / bill arrears) not configurable yet — "hold" is the only rule.
-- [ ] Allocation reversals. FR-CON-007
+- [x] Allocation reversals. FR-CON-007 — done 2026-11-02, see `allocations.propose_reversal` / `_apply_reversal`,
+      `AllocationPanel.tsx`: maker-checker (kind `allocation_reversal`), mirrors the entry with type 2 per member,
+      money back to the receipts, schedule back to ready; refused if a member no longer holds the money. pytest 4 new,
+      live reversal on dev UMB01 (books back to the pre-allocation position), screenshots viewed.
 - [ ] Expected schedules, arrears per employer/month, late-payment interest, ageing buckets.
       FR-CON-002, FR-CON-008, FR-MEM-012
 - [ ] Contribution receipt/acknowledgement PDF. FR-CON-010

@@ -3,6 +3,11 @@ import { Link as RouterLink } from "react-router-dom";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
+import LinearProgress from "@mui/material/LinearProgress";
 import Link from "@mui/material/Link";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
@@ -16,7 +21,7 @@ import Typography from "@mui/material/Typography";
 import { ResponsiveTable } from "../../../components/ResponsiveTable";
 import { StatusChip } from "../../../components/StatusChip";
 import { useFeedback } from "../../../components/feedback/FeedbackProvider";
-import { useAllocate, useAllocationPreview } from "../../../queries/schedules";
+import { useAllocate, useAllocationPreview, useReverseAllocation } from "../../../queries/schedules";
 import { formatAmount, formatMoney } from "../../../utils/format";
 import { formatDate, formatDateTime } from "../../../utils/date";
 import type { Schedule } from "../../../api/schedules";
@@ -30,6 +35,42 @@ function Figure({ label, value, strong }: { label: string; value: string; strong
   );
 }
 
+function ReverseDialog({ schedule, onClose }: { schedule: Schedule; onClose: () => void }) {
+  const reverse = useReverseAllocation(schedule.id);
+  const feedback = useFeedback();
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    setError(null);
+    try {
+      await reverse.mutateAsync(reason);
+      feedback.success("Reversal sent to a contributions checker.");
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't request the reversal.");
+    }
+  }
+
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>Reverse this allocation?</DialogTitle>
+      <DialogContent>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Once a contributions checker approves, every member credit from {schedule.reference} is reversed (Reversal Initial Allocation),
+          the money goes back to the employer's unallocated receipts, and the schedule can be re-opened, corrected and allocated again.
+        </Typography>
+        <TextField label="Reason" value={reason} onChange={(e) => setReason(e.target.value)} multiline minRows={3} fullWidth autoFocus />
+        {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button color="error" variant="contained" onClick={save} disabled={reason.trim().length < 5 || reverse.isPending}>Request reversal</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 // Matching the schedule to the employer's money and allocating it (FR-CON-005/006):
 // the receipts must cover it exactly — hold until resolved.
 export function AllocationPanel({ schedule, canAllocate }: { schedule: Schedule; canAllocate: boolean }) {
@@ -39,12 +80,25 @@ export function AllocationPanel({ schedule, canAllocate }: { schedule: Schedule;
   const feedback = useFeedback();
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const [reversing, setReversing] = useState(false);
 
   useEffect(() => {
     if (query.data) setAmounts(Object.fromEntries(query.data.candidates.map((c) => [c.receipt_id, Number(c.suggested) ? c.suggested : ""])));
   }, [query.data]);
 
-  if (!show || !query.data) return null;
+  if (!show) return null;
+  if (!query.data) {
+    return (
+      <Paper sx={{ p: { xs: 2, sm: 3 } }}>
+        <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 600, mb: 1 }}>Allocation</Typography>
+        {query.error ? (
+          <Alert severity="error" action={<Button color="inherit" size="small" onClick={() => query.refetch()}>Retry</Button>}>{query.error.message}</Alert>
+        ) : (
+          <LinearProgress aria-label="Loading allocation" sx={{ maxWidth: 240 }} />
+        )}
+      </Paper>
+    );
+  }
   const p = query.data;
   const picked = Object.values(amounts).reduce((sum, v) => sum + (Number(v.replace(/,/g, "")) || 0), 0);
   const matches = Math.abs(picked - Number(p.needed)) < 0.005;
@@ -84,7 +138,16 @@ export function AllocationPanel({ schedule, canAllocate }: { schedule: Schedule;
                 ? `Allocated ${live.posted_at ? formatDateTime(live.posted_at) : ""}${live.approved_by ? ` (approved by ${live.approved_by})` : ""} — ${live.journal_reference}. Paid from ${live.receipts.join(", ")}.`
                 : `Waiting for a contributions checker (sent by ${live.created_by}). Paid from ${live.receipts.join(", ")}.`}
             </Alert>
-          ) : (
+          ) : null}
+          {live?.status === "posted" && p.pending_reversal_approval_id && (
+            <Alert severity="warning" sx={{ mt: 2 }} action={<Button color="inherit" size="small" component={RouterLink} to={`/approvals/${p.pending_reversal_approval_id}`}>View request</Button>}>
+              A reversal of this allocation is waiting for a contributions checker.
+            </Alert>
+          )}
+          {live?.status === "posted" && !p.pending_reversal_approval_id && canAllocate && (
+            <Button color="error" onClick={() => setReversing(true)} sx={{ mt: 1.5 }}>Reverse allocation</Button>
+          )}
+          {!live && (
             <>
               {p.blocker && <Alert severity="warning" sx={{ mb: 2 }}>{p.blocker}</Alert>}
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -149,6 +212,7 @@ export function AllocationPanel({ schedule, canAllocate }: { schedule: Schedule;
           )}
         </Box>
       </Stack>
+      {reversing && <ReverseDialog schedule={schedule} onClose={() => setReversing(false)} />}
     </Paper>
   );
 }

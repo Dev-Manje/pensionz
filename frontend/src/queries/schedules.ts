@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  allocateSchedule, createSchedule, getAllocationPreview, getSchedule, listSchedules, removeScheduleLine, saveScheduleLine, scheduleAction, uploadNewSchedule, uploadScheduleFile,
+  allocateSchedule, createSchedule, getAllocationPreview, getSchedule, listSchedules, removeScheduleLine, reverseAllocation, saveScheduleLine, scheduleAction, uploadNewSchedule, uploadScheduleFile,
   type Schedule, type ScheduleFilters, type ScheduleLineInput,
 } from "../api/schedules";
 
@@ -70,6 +70,17 @@ export function useAllocate(id: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: scheduleKeys.all });
       qc.invalidateQueries({ queryKey: ["receipts"] });
+      qc.invalidateQueries({ queryKey: ["approvals"] });
+    },
+  });
+}
+
+export function useReverseAllocation(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (reason: string) => reverseAllocation(id, reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: scheduleKeys.all });
       qc.invalidateQueries({ queryKey: ["approvals"] });
     },
   });

@@ -201,3 +201,61 @@ def test_db_fund_and_access(client, db, officer, checker, world):
     with pytest.raises(HTTPException) as exc:
         allocations.propose(db, officer, s, None)
     assert exc.value.status_code == 409
+
+
+def _posted(client, db, officer, checker, world, amount="45900"):
+    fund, scheme, people, account = world
+    receipt = confirmed_receipt(db, officer, checker, fund, scheme, account, amount)
+    s = ready_schedule(db, officer, fund, scheme)
+    req = client.post(f"/api/v1/schedules/{s.id}/allocate", headers=auth_headers(officer), json={}).json()
+    assert client.post(f"/api/v1/approvals/{req['id']}/approve", headers=auth_headers(checker), json={}).status_code == 200
+    db.refresh(s)
+    return s, receipt
+
+
+def test_reversal_restores_books_and_frees_money(client, db, officer, checker, world):
+    fund, scheme, people, account = world
+    s, receipt = _posted(client, db, officer, checker, world)
+    h = auth_headers(officer)
+    assert client.post(f"/api/v1/schedules/{s.id}/reverse-allocation", headers=h, json={"reason": "x"}).status_code == 400
+    r = client.post(f"/api/v1/schedules/{s.id}/reverse-allocation", headers=h, json={"reason": "Wrong salaries used"})
+    assert r.status_code == 202, r.text
+    assert client.post(f"/api/v1/approvals/{r.json()['id']}/approve", headers=h, json={}).status_code in (400, 403)
+    assert client.post(f"/api/v1/approvals/{r.json()['id']}/approve", headers=auth_headers(checker), json={}).status_code == 200
+    db.refresh(s), db.refresh(receipt)
+    assert s.status == ScheduleStatus.ready
+    assert receipt.unallocated == D("45900.00")
+    for code in ("2000", "2400", "2500"):
+        assert ledger.gl_balance(db, fund.id, code) == D("0.00")
+    assert ledger.gl_balance(db, fund.id, "2100") == D("45900.00")
+    by = ledger.member_balances_by_component(db, people[0].id)[Component.employee]
+    assert by == {1: D("9900.00"), 2: D("-9900.00")}  # Initial Allocation paired with its reversal type
+    assert ledger.tie_out(db, fund.id).ties
+    # Correct and allocate again.
+    assert client.post(f"/api/v1/schedules/{s.id}/reopen", headers=h).status_code == 200
+    assert client.post(f"/api/v1/schedules/{s.id}/submit", headers=h).status_code == 200
+    assert client.post(f"/api/v1/schedules/{s.id}/allocate", headers=h, json={}).status_code == 202
+
+
+def test_reversal_needs_a_posted_allocation_and_happens_once(client, db, officer, checker, world):
+    fund, scheme, people, account = world
+    s = ready_schedule(db, officer, fund, scheme)
+    assert client.post(f"/api/v1/schedules/{s.id}/reverse-allocation", headers=auth_headers(officer), json={"reason": "Nothing posted"}).status_code == 409
+
+
+def test_reversal_refused_when_money_has_left_the_member(client, db, officer, checker, world):
+    fund, scheme, people, account = world
+    s, _ = _posted(client, db, officer, checker, world)
+    # Simulate a payout of the member's employee money since the allocation.
+    ledger.post_member_transactions(db, fund.id, entity_type="test_claim", entity_id=None, entry_date=TODAY, description="Withdrawal",
+                                    postings=[ledger.MemberPosting(people[0], 3, Component.employee, D("9900.00"))], user=None)
+    r = client.post(f"/api/v1/schedules/{s.id}/reverse-allocation", headers=auth_headers(officer), json={"reason": "Wrong salaries used"})
+    assert r.status_code == 409 and "paid out" in r.json()["detail"]
+
+
+def test_preview_shows_pending_reversal(client, db, officer, checker, world):
+    s, _ = _posted(client, db, officer, checker, world)
+    r = client.post(f"/api/v1/schedules/{s.id}/reverse-allocation", headers=auth_headers(officer), json={"reason": "Wrong salaries used"})
+    preview = client.get(f"/api/v1/schedules/{s.id}/allocation", headers=auth_headers(officer))
+    assert preview.status_code == 200, preview.text
+    assert preview.json()["pending_reversal_approval_id"] == r.json()["id"]
