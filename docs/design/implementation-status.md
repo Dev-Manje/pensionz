@@ -426,3 +426,13 @@ are counted ("without salary") and contribute nothing to expected.
 API: `GET /funds/{id}/arrears[?as_at=&scheme_id=]`, `GET /funds/{id}/expected-contributions?scheme_id=&month=` (the
 expected schedule), `GET /members/{id}/arrears`. Frontend: Contributions → "Arrears" tab (total, ageing tiles, employer
 rows expanding to months); member Transactions tab shows the employer arrears for the member with ageing.
+
+### Receipt and acknowledgement documents (FR-CON-010) — 2026-11-02
+
+`services/io/receipt_document.py` (reportlab, A4, fund letterhead: name, address, phone, email, TPIN): `kind(receipt)` →
+"acknowledgement" for a payment notice still `notified` / `pending_approval` (banner "Received — pending confirmation. This
+is not a receipt."; amount notified, method, payment date, references, month) or "receipt" once `confirmed` ("Official
+receipt", number, issue date, amount + amount in words in kwacha/tambala, method, value date, bank account, references,
+month, note that members are credited on allocation). `GET /receipts/{id}/document` (staff with fund access; 409 when
+there's nothing to print; each print audited); `document_kind` on `ReceiptOut`; "Print receipt / acknowledgement" button
+on the receipt page. Not stored — generated on request.

@@ -77,6 +77,8 @@ class ReceiptOut(BaseModel):
     journal_reference: str | None
     can_confirm: bool = False
     can_identify: bool = False
+    # "receipt" | "acknowledgement" | None — what GET /receipts/{id}/document prints.
+    document_kind: str | None = None
 
 
 class AgeingBucketOut(BaseModel):

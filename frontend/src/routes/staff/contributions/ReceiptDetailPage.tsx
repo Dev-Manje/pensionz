@@ -64,6 +64,11 @@ export function ReceiptDetailPage() {
           {r.can_confirm && <Button variant="contained" onClick={() => setDialog("confirm")}>Confirm against bank</Button>}
           {r.can_confirm && <Button color="error" onClick={() => setDialog("decline")}>Not received</Button>}
           {r.can_identify && <Button variant="contained" onClick={() => setDialog("identify")}>Identify employer</Button>}
+          {r.document_kind && (
+            <Button variant="outlined" onClick={() => openFile(`/receipts/${r.id}/document`)}>
+              {r.document_kind === "receipt" ? "Print receipt" : "Print acknowledgement"}
+            </Button>
+          )}
         </Stack>
       </Stack>
 

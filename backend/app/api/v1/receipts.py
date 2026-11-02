@@ -19,6 +19,7 @@ from app.schemas.contribution import (
 )
 from app.services import audit, fund_access, ledger
 from app.services import receipts as service
+from app.services.io import receipt_document
 
 router = APIRouter(tags=["receipts"])
 
@@ -51,6 +52,7 @@ def receipt_out(db: Session, r: ContributionReceipt, user: User) -> ReceiptOut:
         journal_reference=ledger.entry_ref(entry) if entry else None,
         can_confirm=is_maker and r.status == ReceiptStatus.notified,
         can_identify=is_maker and r.status == ReceiptStatus.confirmed and r.scheme_id is None,
+        document_kind=receipt_document.kind(r),
     )
 
 
@@ -146,3 +148,20 @@ def download_proof(receipt_id: uuid.UUID, db: Session = Depends(get_db), user: U
     safe = "".join(c for c in (receipt.proof_filename or "proof") if c.isalnum() or c in "._- ") or "proof"
     return Response(content=storage.download_file(receipt.proof_storage_key), media_type=receipt.proof_content_type,
                     headers={"Content-Disposition": f'inline; filename="{safe}"', "Cache-Control": "no-store"})
+
+
+@router.get("/receipts/{receipt_id}/document")
+def document(receipt_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(require_staff)) -> Response:
+    """The official receipt (confirmed money) or the acknowledgement of a payment notice, as PDF (FR-CON-010)."""
+    receipt = get_receipt(db, user, receipt_id)
+    which = receipt_document.kind(receipt)
+    if which is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "There's nothing to print for this receipt yet")
+    fund = db.get(Fund, receipt.fund_id)
+    scheme = db.get(Scheme, receipt.scheme_id) if receipt.scheme_id else None
+    account = db.get(FundBankAccount, receipt.bank_account_id) if receipt.bank_account_id and which == "receipt" else None
+    content = receipt_document.render(fund, scheme, account, receipt, service.today())
+    audit.record(db, user.id, "contribution_receipt", receipt.id, "document_printed", after={"kind": which}, fund_id=receipt.fund_id)
+    db.commit()
+    name = receipt.receipt_number if which == "receipt" else f"acknowledgement-{receipt.notice_number}"
+    return Response(content=content, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="{name}.pdf"'})

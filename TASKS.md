@@ -293,7 +293,10 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       non-compliant employers (Phase 10 reports); trace employer transfers in expected contributions
       (`member_assignment`); configurable per-employer mismatch rules (refund / carry forward / bill) beyond "hold";
       DB-fund contribution posting.
-- [ ] Contribution receipt/acknowledgement PDF. FR-CON-010
+- [x] Contribution receipt/acknowledgement PDF. FR-CON-010 — done 2026-11-02, see `services/io/receipt_document.py`,
+      `GET /receipts/{id}/document`: acknowledgement of a payment notice ("received — pending confirmation, not a receipt")
+      and the official receipt after confirmation (amount in words). pytest 2 new, both PDFs viewed. Portal download
+      comes with the PO portal (Phase 5).
 
 ## Phase 5 — Principal officer portal (FR-PRT-001, 005, 006)
 
@@ -411,3 +414,8 @@ Open — the default in *italics* is what we build to until answered (from REQUI
   approval, parties, expiry reminders job. Also fixed: MinIO bucket now created at API start-up, `tzdata`
   pinned (worker jobs failed on Windows without it), sign-in survives a server blip instead of signing
   people out. Next: Phase 3 membership.
+- 2026-11-02 — **Phase 4 built and verified** (ledger & contributions): per-fund chart + immutable journal + member
+  transactions by component, exact reversals; two-stage receipts (PO notice → staff confirm → checker; unidentified money);
+  schedules (prefilled template, upload, line checks incl. statutory minimum); allocation (hold until resolved, fees by
+  payer, maker-checker) and its reversal; arrears/ageing/interest (calculated); receipt & acknowledgement PDFs. Decisions
+  recorded under "Receipts & allocation rules". Follow-ups listed under Phase 4. Next: Phase 5 principal officer portal.

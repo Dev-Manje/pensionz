@@ -393,7 +393,11 @@ User/Role/FundAccess · AuditEvent · Notification/Outbox · MigrationBatch.
    the PAYE bands and the lump-sum tax rules with MRA before production values are entered.*
 10. **Payments:** which banks; bank file formats; cheques still used; mobile-money payouts.
 11. **Chart of accounts and journal recipes** in `pz-accounting`: confirm with finance;
-    integration with Old Mutual's corporate GL.
+    integration with Old Mutual's corporate GL. *Partly resolved 2026-11-02 (user): receipts post cash to suspense
+    (Dr 1000 / Cr 2100) only after staff confirm the money and a checker approves — the principal officer's payment notice
+    gets an acknowledgement "received, pending confirmation", the official receipt follows confirmation; allocation posts
+    Dr 2100 / Cr 2000 net + fee payables; schedule ≠ money → hold until resolved (FR-CON-006); %-of-contribution fees
+    follow the rule's payer. Chart itself still to confirm with finance.*
 12. **Minors' trust accounts:** payout rules (instalments for school fees/maintenance, age of
     majority 18?), guardian verification.
 13. **Hosting, SSO** (Old Mutual Active Directory for staff?), MFA channel, data residency.

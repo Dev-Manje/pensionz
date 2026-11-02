@@ -190,3 +190,29 @@ def test_receipt_access(client, db, setup):
                        json=capture_body(scheme, account)).status_code == 403
     portal = make_user(db, UserRole.principal_officer)
     assert client.get(f"/api/v1/funds/{fund.id}/receipts", headers=auth_headers(portal)).status_code == 403
+
+
+def test_receipt_documents(client, db, officer, checker, po, setup):
+    fund, scheme, account = setup
+    notice = receipts.submit_notice(db, po, scheme, amount=D("742300"), payment_date=TODAY, payment_method=PaymentMethod.rtgs,
+                                    payer_reference="EMP01 OCT", contribution_month=TODAY, notes=None)
+    h = auth_headers(officer)
+    assert client.get(f"/api/v1/receipts/{notice.id}", headers=h).json()["document_kind"] == "acknowledgement"
+    ack = client.get(f"/api/v1/receipts/{notice.id}/document", headers=h)
+    assert ack.status_code == 200 and ack.content.startswith(b"%PDF")
+    r = client.post(f"/api/v1/receipts/{notice.id}/confirm", headers=h,
+                    json={"value_date": TODAY.isoformat(), "amount": "742300", "bank_account_id": str(account.id)})
+    approve(client, checker, r.json()["id"])
+    assert client.get(f"/api/v1/receipts/{notice.id}", headers=h).json()["document_kind"] == "receipt"
+    official = client.get(f"/api/v1/receipts/{notice.id}/document", headers=h)
+    assert official.status_code == 200 and f"{fund.code}-R000001.pdf" in official.headers["content-disposition"]
+    # A staff capture has nothing to print until it is confirmed.
+    pending = client.post(f"/api/v1/funds/{fund.id}/receipts", headers=h, json=capture_body(scheme, account)).json()
+    assert client.get(f"/api/v1/receipts/{pending['entity_id']}/document", headers=h).status_code == 409
+
+
+def test_amount_in_words():
+    from app.services.io.receipt_document import amount_in_words
+    assert amount_in_words(D("1250000.50")) == "One million two hundred and fifty thousand kwacha and fifty tambala"
+    assert amount_in_words(D("1001")) == "One thousand and one kwacha only"
+    assert amount_in_words(D("284006.25")) == "Two hundred and eighty-four thousand and six kwacha and twenty-five tambala"

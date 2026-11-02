@@ -48,6 +48,7 @@ export interface Receipt {
   journal_reference: string | null;
   can_confirm: boolean;
   can_identify: boolean;
+  document_kind: "receipt" | "acknowledgement" | null;
 }
 
 export interface ReceiptPage {
