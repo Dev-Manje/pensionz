@@ -467,3 +467,18 @@ used_at).
   `require_officer_scheme(db, user, scheme_id)` (404 unless linked) — every per-employer portal endpoint goes through it.
   `GET /po/schemes` (principal officer only) → employers with fund, due day, billing, member count. `/po` home lists them
   grouped by fund.
+
+### Principal officer dashboard (FR-PRT-001) — 2026-11-02
+
+`services/portal.py` → `GET /po/dashboard` (principal officer; only linked employers, any fund) → `{as_at, schemes, activity}`.
+- **This month's remittance** (`current_remittance`): last month's contributions, due this month on the employer's day
+  (`arrears.due_date`). Stage from the month's main (non-supplementary, not cancelled) schedule — `allocated`,
+  `awaiting_allocation` (ready), `draft` — else `payment_only` when a live notice/receipt names that month, else
+  `not_started`; plus `days_to_due` (negative when late), schedule reference/total/lines, `notified_amount` (notices not
+  yet confirmed) and `confirmed_amount` (receipts for that month; receipts without a contribution month aren't counted).
+- **Arrears** (`arrears_summary`): totals only from `arrears.scheme_arrears` — overdue amount, months, oldest month and
+  days, interest (None when no rate). No member-level detail.
+- **Activity** (`recent_activity`): last 90 days, newest first, at most 12 — notice sent, payment received (receipt
+  number), notice not confirmed (with the reason), schedule sent, contributions credited, allocation taken back.
+- Frontend `/po`: summary alert (employers late this month, total arrears), one card per employer grouped by fund with a
+  remittance panel (plain-language stage + what happens next, `routes/po/poLabels.ts`) and an arrears panel; activity list.

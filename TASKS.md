@@ -312,7 +312,12 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       pytest 19 new (`test_portal_access.py`), curl smoke incl. 401/403, screenshots 1440/820/390 viewed.
       Follow-ups: SMS channel for codes (gateway open); code before money-affecting portal actions (service ready —
       purpose = action — wire in with remittances); approval dialog diff table overflows at 390px (staff, pre-existing).
-- [ ] PO dashboard: schemes, current month remittance status, arrears, recent activity.
+- [x] PO dashboard: schemes, current month remittance status, arrears, recent activity. — done 2026-11-02, see
+      `services/portal.dashboard`, `GET /po/dashboard`, `routes/po/PoHome.tsx`. Per employer (grouped by fund): last
+      month's contributions (due this month) — stage, due date / days left or overdue, schedule, money noted/received,
+      next step; arrears totals (overdue months, oldest, interest); activity feed (90 days, 12 items) across all the
+      officer's employers. pytest 12 new (`test_po_dashboard.py`), vitest 2, curl incl. 403, screenshots 1440/820/390
+      viewed. Follow-up: links from the cards/activity to remittance pages once those exist (next tasks).
 - [ ] Organisation KYC from the portal (reuse Phase 2 forms) and change requests.
 - [ ] Remit contributions: upload/capture schedule, attach proof of payment, see validation errors per
       row, submit → staff allocation queue; history with allocation status. Payment notice = `receipts.submit_notice`

@@ -350,6 +350,51 @@ export interface PortalScheme {
   member_count: number;
 }
 
+// Where last month's contributions (due this month) have got to.
+export type RemittanceStage = "not_started" | "payment_only" | "draft" | "awaiting_allocation" | "allocated";
+
+export interface CurrentRemittance {
+  month: string;
+  due_date: string;
+  // Negative once the due date has passed.
+  days_to_due: number;
+  stage: RemittanceStage;
+  schedule_id: string | null;
+  schedule_reference: string | null;
+  schedule_total: string | null;
+  member_lines: number;
+  notified_amount: string;
+  confirmed_amount: string;
+}
+
+export interface ArrearsSummary {
+  total: string;
+  interest: string | null;
+  overdue_months: number;
+  oldest_month: string | null;
+  oldest_days_overdue: number | null;
+}
+
+export interface DashboardScheme extends PortalScheme {
+  current: CurrentRemittance;
+  arrears: ArrearsSummary;
+}
+
+export interface PortalActivity {
+  at: string;
+  scheme_id: string;
+  scheme_name: string;
+  kind: "notice_sent" | "payment_confirmed" | "notice_rejected" | "schedule_sent" | "allocated" | "allocation_reversed";
+  title: string;
+  detail: string | null;
+}
+
+export interface PoDashboard {
+  as_at: string;
+  schemes: DashboardScheme[];
+  activity: PortalActivity[];
+}
+
 export interface SchemeSummary {
   id: string;
   fund_id: string;
