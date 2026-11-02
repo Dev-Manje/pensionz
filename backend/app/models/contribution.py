@@ -16,9 +16,9 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String, Text, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 from app.models.mixins import TimestampMixin, UUIDPKMixin, str_enum
@@ -95,3 +95,78 @@ class ContributionReceipt(UUIDPKMixin, TimestampMixin, Base):
     @property
     def unallocated(self) -> Decimal:
         return (self.amount or Decimal("0")) - self.allocated_amount if self.status == ReceiptStatus.confirmed else Decimal("0")
+
+
+class ScheduleStatus(str, enum.Enum):
+    # Being built (upload or capture); lines can change.
+    draft = "draft"
+    # Checked with no errors and handed over for allocation.
+    ready = "ready"
+    allocated = "allocated"
+    cancelled = "cancelled"
+
+
+class ScheduleSource(str, enum.Enum):
+    upload = "upload"
+    manual = "manual"
+    portal = "portal"
+
+
+class ContributionSchedule(UUIDPKMixin, TimestampMixin, Base):
+    """An employer's member-by-member split of one month's contributions
+    (FR-CON-003). One main schedule per employer per month; back pay or
+    corrections go in supplementary schedules."""
+
+    __tablename__ = "contribution_schedule"
+
+    fund_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("fund.id"), nullable=False, index=True)
+    scheme_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("scheme.id"), nullable=False, index=True)
+    # First day of the month the contributions are for.
+    contribution_month: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    supplementary: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    reference: Mapped[str] = mapped_column(String(40), nullable=False)
+    status: Mapped[ScheduleStatus] = mapped_column(str_enum(ScheduleStatus, 20), nullable=False, default=ScheduleStatus.draft, index=True)
+    source: Mapped[ScheduleSource] = mapped_column(str_enum(ScheduleSource, 20), nullable=False)
+    filename: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Totals of all lines, kept in step on every change.
+    total_employee: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal("0"))
+    total_employer: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal("0"))
+    total_voluntary: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal("0"))
+    total_severance: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal("0"))
+    total: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal("0"))
+    line_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    error_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    warning_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=True)
+    submitted_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=True)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    lines: Mapped[list["ContributionScheduleLine"]] = relationship(
+        back_populates="schedule", lazy="selectin", order_by="ContributionScheduleLine.row_no", cascade="all, delete-orphan"
+    )
+
+
+class ContributionScheduleLine(UUIDPKMixin, Base):
+    __tablename__ = "contribution_schedule_line"
+
+    schedule_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("contribution_schedule.id", ondelete="CASCADE"), nullable=False, index=True)
+    row_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    member_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("member.id"), nullable=True, index=True)
+    # As given on the schedule (kept even when no member matches).
+    account_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    employee_no: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    member_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    pensionable_salary: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
+    employee: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal("0"))
+    employer: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal("0"))
+    voluntary: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal("0"))
+    severance: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal("0"))
+    errors: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    warnings: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+
+    schedule: Mapped["ContributionSchedule"] = relationship(back_populates="lines")
+
+    @property
+    def total(self) -> Decimal:
+        return self.employee + self.employer + self.voluntary + self.severance

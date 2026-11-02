@@ -51,6 +51,9 @@ export const STATUS_LABELS: Record<string, string> = {
   // contribution receipts
   notified: "Notice — to confirm",
   confirmed: "Confirmed",
+  // contribution schedules
+  ready: "Ready for allocation",
+  allocated: "Allocated",
   // approvals and requests
   draft: "Draft",
   pending: "Awaiting approval",
@@ -105,6 +108,8 @@ const TONES: Record<string, StatusTone> = {
   imported: "success",
   notified: "info",
   confirmed: "success",
+  ready: "info",
+  allocated: "success",
 };
 
 /** "pending" → "Awaiting approval"; unknown codes become "Sentence case". */

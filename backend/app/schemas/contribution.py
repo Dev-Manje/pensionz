@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
-from app.models.contribution import PaymentMethod, ReceiptSource, ReceiptStatus
+from app.models.contribution import PaymentMethod, ReceiptSource, ReceiptStatus, ScheduleSource, ScheduleStatus
 
 
 class ReceiptCaptureIn(BaseModel):
@@ -90,3 +90,78 @@ class ReceiptPage(BaseModel):
     total: int
     unallocated_ageing: list[AgeingBucketOut]
     notices_waiting: int
+
+
+class ScheduleCreateIn(BaseModel):
+    scheme_id: uuid.UUID
+    contribution_month: date
+    supplementary: bool = False
+    notes: str | None = Field(None, max_length=2000)
+    # Start with a line per expected member at the expected amounts.
+    prefill: bool = True
+
+
+class ScheduleLineIn(BaseModel):
+    account_code: str | None = Field(None, max_length=20)
+    employee_no: str | None = Field(None, max_length=30)
+    member_name: str | None = Field(None, max_length=200)
+    pensionable_salary: Decimal | None = Field(None, ge=0, max_digits=18, decimal_places=2)
+    employee: Decimal = Field(Decimal("0"), max_digits=18, decimal_places=2)
+    employer: Decimal = Field(Decimal("0"), max_digits=18, decimal_places=2)
+    voluntary: Decimal = Field(Decimal("0"), max_digits=18, decimal_places=2)
+    severance: Decimal = Field(Decimal("0"), max_digits=18, decimal_places=2)
+
+
+class ScheduleLineOut(BaseModel):
+    id: uuid.UUID
+    row_no: int
+    member_id: uuid.UUID | None
+    account_code: str | None
+    employee_no: str | None
+    member_name: str | None
+    pensionable_salary: Decimal | None
+    employee: Decimal
+    employer: Decimal
+    voluntary: Decimal
+    severance: Decimal
+    total: Decimal
+    errors: list[str]
+    warnings: list[str]
+
+    model_config = {"from_attributes": True}
+
+
+class ScheduleSummaryOut(BaseModel):
+    id: uuid.UUID
+    fund_id: uuid.UUID
+    scheme_id: uuid.UUID
+    employer: str
+    contribution_month: date
+    supplementary: bool
+    reference: str
+    status: ScheduleStatus
+    source: ScheduleSource
+    filename: str | None
+    total_employee: Decimal
+    total_employer: Decimal
+    total_voluntary: Decimal
+    total_severance: Decimal
+    total: Decimal
+    line_count: int
+    error_count: int
+    warning_count: int
+    created_by: str | None
+    created_at: datetime
+    submitted_by: str | None
+    submitted_at: datetime | None
+
+
+class ScheduleOut(ScheduleSummaryOut):
+    notes: str | None
+    lines: list[ScheduleLineOut]
+    can_edit: bool
+
+
+class SchedulePage(BaseModel):
+    items: list[ScheduleSummaryOut]
+    total: int

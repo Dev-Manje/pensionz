@@ -356,3 +356,25 @@ Migration `e3b8d5f1a274_receipts.py`; `models/contribution.py` (`contribution_re
   from value date) and `notices_waiting`. `allocated_amount` is maintained by allocation (next task).
 - Frontend: **Contributions** menu (`/contributions?fund=`), "Money received" tab (notice banner, suspense ageing tiles,
   filters, list), record dialog; receipt page `/contributions/receipts/:id` (confirm / not received / identify, proof).
+
+### Contribution schedules (FR-CON-001, FR-CON-003) — 2026-11-02
+
+Migration `f4c9e6a2b385_schedules.py`; `contribution_schedule` (fund, employer, month, supplementary, reference
+`<EMP>-YYYYMM[-Sn]`, status draft → ready → allocated / cancelled, source upload/manual/portal, totals per component, line /
+error / warning counts) + `contribution_schedule_line` (row, member, account code / employee no / name as given, salary,
+employee / employer / voluntary / severance, errors, warnings). One main (non-supplementary, non-cancelled) schedule per
+employer-month (partial unique index + 409). Future months refused.
+`services/schedules.py`: `expected_for` (salary on record at month end × category terms in force — reused by expected
+schedules/arrears), `recheck` re-validates every line on every change (errors: unknown member, other employer, status
+without contributions, joined after month, duplicate row, negative/empty line, AVC not allowed, no category terms,
+percent contribution below `min_employee/employer_contribution_pct` for DC; warnings: differs from category rate × salary,
+salary differs from record, no salary, member on another schedule that month). `submit` (no errors) → ready; `reopen`;
+`cancel` (not once allocated). Components: employee, employer, voluntary, severance (transfer-in isn't on schedules).
+`services/io/contribution_schedule.py`: "Schedule" sheet template prefilled with active members + Guide sheet; reader for
+.xlsx/.csv by heading, amounts with commas; unreadable amounts become line errors.
+API: `GET/POST /funds/{id}/schedules`, `GET …/schedules/template?scheme_id=&month=`, `POST …/schedules/upload` (file checked
+before a draft is created), `GET /schedules/{id}`, `POST …/upload`, `…/fill-expected`, `…/lines` (+ PUT/DELETE
+`…/lines/{line}`), `…/submit`, `…/reopen`, `…/cancel`. Makers: contributions officer; viewing: staff with fund access.
+Frontend: Contributions → "Schedules" tab (filters, new-schedule dialog: expected / empty / upload + template link);
+`/contributions/schedules/:id` (totals by component, problems-only filter, line dialog, upload corrected file, add missing
+members, submit / re-open / cancel).

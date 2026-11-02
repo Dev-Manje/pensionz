@@ -12,8 +12,10 @@ import { useUrlParam, useUrlTab } from "../../../hooks/useUrlState";
 import { useFunds } from "../../../queries/funds";
 import { ReceiptDetailPage } from "./ReceiptDetailPage";
 import { ReceiptsTab } from "./ReceiptsTab";
+import { ScheduleDetailPage } from "./ScheduleDetailPage";
+import { SchedulesTab } from "./SchedulesTab";
 
-const TABS = ["receipts"] as const;
+const TABS = ["receipts", "schedules"] as const;
 type ContributionsTab = (typeof TABS)[number];
 
 // Contributions back office (FR-CON): money in, schedules, allocation and arrears per fund.
@@ -44,8 +46,10 @@ function ContributionsHome() {
           </TextField>
           <Tabs value={tab} onChange={(_, v: ContributionsTab) => setTab(v)} variant="scrollable" scrollButtons={false}>
             <Tab value="receipts" label="Money received" />
+            <Tab value="schedules" label="Schedules" />
           </Tabs>
           {fundId && tab === "receipts" && <ReceiptsTab fundId={fundId} />}
+          {fundId && tab === "schedules" && <SchedulesTab fundId={fundId} />}
         </Stack>
       )}
     </>
@@ -57,6 +61,7 @@ export function ContributionsPage() {
     <Routes>
       <Route index element={<ContributionsHome />} />
       <Route path="receipts/:receiptId" element={<ReceiptDetailPage />} />
+      <Route path="schedules/:scheduleId" element={<ScheduleDetailPage />} />
     </Routes>
   );
 }

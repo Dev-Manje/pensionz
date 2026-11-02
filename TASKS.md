@@ -266,8 +266,11 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       against the bank → contributions checker approves → Dr 1000 / Cr 2100 + receipt number), staff capture without a
       notice, unidentified money + identify (reclass inside 2100), proof of payment upload, suspense ageing.
       pytest 9 new, API smoke (self-approve 400, member admin 403, PO 403, future value date 400), screenshots viewed.
-- [ ] Contribution schedules: Excel/CSV template upload + manual capture, row validation, rates ≥
-      minimum. FR-CON-001, FR-CON-003
+- [x] Contribution schedules: Excel/CSV template upload + manual capture, row validation, rates ≥
+      minimum. FR-CON-001, FR-CON-003 — done 2026-11-02, see `services/schedules.py`, `services/io/contribution_schedule.py`,
+      `routes/staff/contributions/Schedule*.tsx`: draft per employer-month (+ supplementary), template prefilled with
+      expected amounts, upload/replace, line add/edit/remove, errors block submit, warnings for rate/salary differences.
+      pytest 9 new, API smoke (409 duplicate main, checker 403), screenshots 1440 + 390 viewed.
 - [ ] Reconcile schedule ↔ receipt, over/under-payment rules, **Initial Allocation** posting net of
       fees, maker-checker. FR-CON-005, FR-CON-006
 - [ ] Allocation reversals. FR-CON-007
