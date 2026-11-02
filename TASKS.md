@@ -352,6 +352,19 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       change requests, KYC document updates. FR-PRT-002
 - [ ] Notifications to members (joined, statement ready, bank details changed). FR-NOT-003
 
+## UAT checkpoint — Phases 6–7 (user acceptance testing)
+
+**Gate:** Phase 8 starts only after the user confirms in writing that this UAT has passed (decided 2026-11-02).
+
+- [ ] Refresh the UAT environment and data set (add bonus declarations, a few months of contributions, member portal logins).
+- [ ] UAT scripts (`docs/uat/`): bonus declaration → preview → approve → post, reversal and interim → final true-up
+      (known-answer figures); account and comprehensive enquiries; member benefit statement (single + bulk) and the
+      statement/trail reports; member portal end to end (self-register, OTP, balances, statements, beneficiaries,
+      contact/bank change requests); member notifications; regression of the Phase 0–5 scripts.
+- [ ] UAT session(s) run with the user; defects logged in `docs/uat/defects.md`.
+- [ ] Fix UAT defects (each verified with `pz-verify` and re-tested).
+- [ ] **UAT sign-off from the user** — only then start Phase 8.
+
 ## Phase 8 — Benefits & claims (FR-BEN)
 
 - [ ] Claim types, intake (staff, PO exit notification, member portal), document checklists. FR-BEN-001, 002
@@ -375,6 +388,19 @@ Open — the default in *italics* is what we build to until answered (from REQUI
 - [ ] Bank statement import & matching. FR-ACC-005
 - [ ] Trial balance, net assets statements; operational reports; Excel/PDF export.
       FR-ACC-007, FR-ENQ-004, FR-ENQ-007
+
+## UAT checkpoint — Phases 8–10 (user acceptance testing)
+
+**Gate:** Phase 11 starts only after the user confirms in writing that this UAT has passed (decided 2026-11-02).
+
+- [ ] Refresh the UAT environment and data set (claims of each type, payees with verified bank details, a bank statement file).
+- [ ] UAT scripts (`docs/uat/`): claim intake from staff / PO / member portal, documents, benefit quote, elections,
+      approval levels by amount, death claim and minors' trust; payments (voucher, bank-detail change with cooling-off,
+      batches, second approval, EFT/cheque export, returns); reconciliation, period close, bank statement matching, trial
+      balance and net assets reports; regression of the Phase 0–7 scripts.
+- [ ] UAT session(s) run with the user; defects logged in `docs/uat/defects.md`.
+- [ ] Fix UAT defects (each verified with `pz-verify` and re-tested).
+- [ ] **UAT sign-off from the user** — only then start Phase 11.
 
 ## Phase 11 — Legacy data migration (FR-MIG)
 
