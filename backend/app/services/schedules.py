@@ -388,9 +388,17 @@ def submit(db: Session, user: User, schedule: ContributionSchedule) -> Contribut
     return schedule
 
 
+def _no_pending_allocation(db: Session, schedule: ContributionSchedule) -> None:
+    from app.services import allocations
+
+    if allocations.live_allocation(db, schedule.id) is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "An allocation of this schedule is waiting for approval — withdraw or reject it first")
+
+
 def reopen(db: Session, user: User, schedule: ContributionSchedule) -> ContributionSchedule:
     if schedule.status != ScheduleStatus.ready:
         raise HTTPException(status.HTTP_409_CONFLICT, "Only a schedule waiting for allocation can be re-opened")
+    _no_pending_allocation(db, schedule)
     schedule.status, schedule.submitted_by_user_id, schedule.submitted_at = ScheduleStatus.draft, None, None
     audit.record(db, user.id, "contribution_schedule", schedule.id, "reopened", fund_id=schedule.fund_id)
     db.commit()
@@ -401,6 +409,7 @@ def reopen(db: Session, user: User, schedule: ContributionSchedule) -> Contribut
 def cancel(db: Session, user: User, schedule: ContributionSchedule) -> ContributionSchedule:
     if schedule.status not in (ScheduleStatus.draft, ScheduleStatus.ready):
         raise HTTPException(status.HTTP_409_CONFLICT, "An allocated schedule can't be cancelled — reverse the allocation instead")
+    _no_pending_allocation(db, schedule)
     schedule.status = ScheduleStatus.cancelled
     audit.record(db, user.id, "contribution_schedule", schedule.id, "cancelled", fund_id=schedule.fund_id)
     db.commit()

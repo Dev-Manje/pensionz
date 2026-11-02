@@ -378,3 +378,28 @@ before a draft is created), `GET /schedules/{id}`, `POST …/upload`, `…/fill-
 Frontend: Contributions → "Schedules" tab (filters, new-schedule dialog: expected / empty / upload + template link);
 `/contributions/schedules/:id` (totals by component, problems-only filter, line dialog, upload corrected file, add missing
 members, submit / re-open / cancel).
+
+### Allocation — schedule ↔ receipts, Initial Allocation (FR-CON-005, FR-CON-006) — 2026-11-02
+
+Migration `a5d1f7b3c496_allocations.py`: `contribution_allocation` (schedule, status pending_approval / posted / rejected /
+cancelled / reversed, schedule total, member fees, employer fees, amount from receipts, net to members, fee lines JSON,
+journal entry) + `contribution_allocation_receipt` (receipt, amount). Partial unique index: one pending/posted allocation
+per schedule. `services/allocations.py`:
+- `plan_for`: fee rules with basis % of contributions in force at the month end (`fee_rules.rules_in_force`, employer rule
+  replaces fund rule of the same type); payer member → per line and component, rounded half-up, deducted; payer employer
+  → % of schedule total on top; payer fund and other bases → not at allocation. Fee GL: administration/other 2500, risk
+  premium 2400, investment management 2450, statutory levy 2350 (2350/2450 added to the proposed chart).
+- `available(receipt)` = amount − allocated − held by pending allocations; `candidate_receipts` oldest value date first;
+  `auto_pick`.
+- `propose` (contributions officer): schedule ready and still error-free, not a DB fund, receipts of the same employer,
+  each ≤ available, Σ = schedule total + employer fees exactly (409 with "short — hold" / "too much"). Approval kind
+  `contribution_allocation` (contributions checker).
+- Apply: re-checks schedule and fee plan (409 if changed), locks receipts, posts one entry dated in the open month —
+  type 1 Initial Allocation per member per component of the **net** amount (Dr 2100 / Cr 2000, contribution month,
+  reference = schedule ref) + Dr 2100 / Cr fee account per fee; receipts' `allocated_amount` up; schedule allocated;
+  principal officers notified. Reject → rejected (withdraw → cancelled), money released.
+- Schedules can't be re-opened or cancelled while an allocation is pending.
+API: `GET /schedules/{id}/allocation` (plan, candidates with suggested amounts, blocker, history),
+`POST /schedules/{id}/allocate` ({receipts: [{receipt_id, amount}]} or null = auto).
+Frontend: allocation panel on the schedule page (figures, receipts with editable amounts, "Using X of Y needed",
+send for approval, pending/posted state).

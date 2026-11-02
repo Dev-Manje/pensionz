@@ -165,3 +165,59 @@ class ScheduleOut(ScheduleSummaryOut):
 class SchedulePage(BaseModel):
     items: list[ScheduleSummaryOut]
     total: int
+
+
+class FeeLineOut(BaseModel):
+    code: str
+    name: str
+    fee_type: str
+    payer: str
+    rate: Decimal
+    amount: Decimal
+    gl_code: str
+
+
+class CandidateReceiptOut(BaseModel):
+    receipt_id: uuid.UUID
+    receipt_number: str
+    value_date: date
+    amount: Decimal
+    available: Decimal
+    suggested: Decimal
+
+
+class AllocationOut(BaseModel):
+    id: uuid.UUID
+    status: str
+    amount: Decimal
+    net_to_members: Decimal
+    journal_reference: str | None
+    approval_request_id: uuid.UUID | None
+    created_by: str | None
+    approved_by: str | None
+    posted_at: datetime | None
+    receipts: list[str]
+
+
+class AllocationPreviewOut(BaseModel):
+    schedule_total: Decimal
+    member_fees: Decimal
+    employer_fees: Decimal
+    needed: Decimal
+    net_to_members: Decimal
+    fees: list[FeeLineOut]
+    candidates: list[CandidateReceiptOut]
+    available_total: Decimal
+    # Why it can't be allocated now (None when it can).
+    blocker: str | None
+    allocations: list[AllocationOut]
+
+
+class AllocationPickIn(BaseModel):
+    receipt_id: uuid.UUID
+    amount: Decimal = Field(gt=0, max_digits=18, decimal_places=2)
+
+
+class AllocateIn(BaseModel):
+    # None = take the employer's receipts oldest first.
+    receipts: list[AllocationPickIn] | None = None

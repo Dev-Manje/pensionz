@@ -1,20 +1,23 @@
 import uuid
 from datetime import date
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_roles, require_staff
-from app.api.v1.approvals import _name
+from app.api.v1.approvals import _name, to_out
 from app.core.database import get_db
-from app.models.contribution import ContributionSchedule, ScheduleSource, ScheduleStatus
+from app.models.contribution import ContributionAllocation, ContributionReceipt, ContributionSchedule, ScheduleSource, ScheduleStatus
 from app.models.identity import User
 from app.models.scheme import Scheme
+from app.schemas.approval import ApprovalOut
 from app.schemas.contribution import (
+    AllocateIn, AllocationOut, AllocationPreviewOut, CandidateReceiptOut, FeeLineOut,
     ScheduleCreateIn, ScheduleLineIn, ScheduleLineOut, ScheduleOut, SchedulePage, ScheduleSummaryOut,
 )
-from app.services import fund_access
+from app.services import allocations, fund_access
 from app.services import schedules as service
 from app.services.io import contribution_schedule as io_schedule
 
@@ -155,3 +158,59 @@ def reopen(schedule_id: uuid.UUID, db: Session = Depends(get_db), user: User = D
 @router.post("/schedules/{schedule_id}/cancel", response_model=ScheduleOut)
 def cancel(schedule_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(maker)) -> ScheduleOut:
     return schedule_out(db, service.cancel(db, user, get_schedule(db, user, schedule_id)), user)
+
+
+# ---- allocation (FR-CON-005, FR-CON-006)
+
+
+def _allocation_out(db: Session, a: ContributionAllocation) -> AllocationOut:
+    from app.models.ledger import JournalEntry
+    from app.services import ledger
+
+    entry = db.get(JournalEntry, a.journal_entry_id) if a.journal_entry_id else None
+    numbers = []
+    for part in a.receipts:
+        r = db.get(ContributionReceipt, part.receipt_id)
+        numbers.append(f"{r.receipt_number} · MWK {part.amount:,.2f}")
+    return AllocationOut(id=a.id, status=a.status.value, amount=a.amount, net_to_members=a.net_to_members,
+                         journal_reference=ledger.entry_ref(entry) if entry else None, approval_request_id=a.approval_request_id,
+                         created_by=_name(db, a.created_by_user_id), approved_by=_name(db, a.approved_by_user_id), posted_at=a.posted_at,
+                         receipts=numbers)
+
+
+@router.get("/schedules/{schedule_id}/allocation", response_model=AllocationPreviewOut)
+def allocation_preview(schedule_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(require_staff)) -> AllocationPreviewOut:
+    """What allocating the schedule takes: fees by payer, money needed, the employer's receipts with money left."""
+    s = get_schedule(db, user, schedule_id)
+    plan = allocations.plan_for(db, s)
+    candidates = allocations.candidate_receipts(db, s)
+    suggested = dict(allocations.auto_pick(candidates, plan.needed))
+    available_total = sum((a for _, a in candidates), Decimal("0"))
+    blocker = None
+    live = allocations.live_allocation(db, s.id)
+    if s.status == ScheduleStatus.draft:
+        blocker = "Submit the schedule for allocation first."
+    elif s.status != ScheduleStatus.ready:
+        blocker = None if s.status == ScheduleStatus.allocated else "This schedule can't be allocated."
+    elif live is not None:
+        blocker = "An allocation is waiting for a contributions checker."
+    elif available_total < plan.needed:
+        blocker = (f"Hold: the employer's confirmed receipts have MWK {available_total:,.2f} available but the schedule needs "
+                   f"MWK {plan.needed:,.2f}. Allocate once the rest is received and confirmed.")
+    history = db.execute(select(ContributionAllocation).where(ContributionAllocation.schedule_id == s.id)
+                         .order_by(ContributionAllocation.created_at.desc())).scalars().all()
+    return AllocationPreviewOut(
+        schedule_total=plan.schedule_total, member_fees=plan.member_fees, employer_fees=plan.employer_fees, needed=plan.needed,
+        net_to_members=plan.net_to_members, fees=[FeeLineOut(**f.__dict__) for f in plan.fees],
+        candidates=[CandidateReceiptOut(receipt_id=r.id, receipt_number=r.receipt_number, value_date=r.value_date, amount=r.amount,
+                                        available=a, suggested=suggested.get(r.id, Decimal("0"))) for r, a in candidates],
+        available_total=available_total, blocker=blocker, allocations=[_allocation_out(db, a) for a in history],
+    )
+
+
+@router.post("/schedules/{schedule_id}/allocate", response_model=ApprovalOut, status_code=status.HTTP_202_ACCEPTED)
+def allocate(schedule_id: uuid.UUID, payload: AllocateIn, db: Session = Depends(get_db), user: User = Depends(maker)) -> ApprovalOut:
+    """Sends the allocation to a contributions checker; receipts must cover the schedule exactly."""
+    s = get_schedule(db, user, schedule_id)
+    picks = [(p.receipt_id, p.amount) for p in payload.receipts] if payload.receipts is not None else None
+    return to_out(db, allocations.propose(db, user, s, picks), user)

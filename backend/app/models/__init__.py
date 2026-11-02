@@ -2,7 +2,7 @@ from app.models.approval import ApprovalRequest, ApprovalStatus
 from app.models.audit import AuditEvent
 from app.models.category import BenefitCategory, BenefitCategoryTerms, BenefitDesign, CategoryStatus, RateType, SalaryBasis
 from app.models.contribution import (
-    ContributionReceipt, ContributionSchedule, ContributionScheduleLine, PaymentMethod, ReceiptSource, ReceiptStatus, ScheduleSource, ScheduleStatus,
+    AllocationReceipt, AllocationStatus, ContributionAllocation, ContributionReceipt, ContributionSchedule, ContributionScheduleLine, PaymentMethod, ReceiptSource, ReceiptStatus, ScheduleSource, ScheduleStatus,
 )
 from app.models.fee import FeeBasis, FeeFrequency, FeePayer, FeeRule, FeeType
 from app.models.fund import BankAccountPurpose, Fund, FundBankAccount, FundStatus, FundTrustee, FundType, UserFundAccess
@@ -34,5 +34,5 @@ __all__ = [
     "NotificationOutbox", "OutboxStatus", "PasswordResetToken", "User", "UserNotification", "UserRole",
     "UserRoleAssignment", "UserStatus", "AssignmentReason", "Member", "MemberAssignment", "MemberStatus", "MemberStatusChange", "Beneficiary", "BeneficiaryNomination", "MemberSalary", "MemberServicePeriod", "ImportStatus", "MemberImport",
     "AccountClass", "Book", "Component", "GLAccount", "JournalEntry", "LedgerLine", "MemberTransaction",
-    "ContributionReceipt", "ContributionSchedule", "ContributionScheduleLine", "ScheduleSource", "ScheduleStatus", "PaymentMethod", "ReceiptSource", "ReceiptStatus",
+    "AllocationReceipt", "AllocationStatus", "ContributionAllocation", "ContributionReceipt", "ContributionSchedule", "ContributionScheduleLine", "ScheduleSource", "ScheduleStatus", "PaymentMethod", "ReceiptSource", "ReceiptStatus",
 ]

@@ -271,8 +271,13 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       `routes/staff/contributions/Schedule*.tsx`: draft per employer-month (+ supplementary), template prefilled with
       expected amounts, upload/replace, line add/edit/remove, errors block submit, warnings for rate/salary differences.
       pytest 9 new, API smoke (409 duplicate main, checker 403), screenshots 1440 + 390 viewed.
-- [ ] Reconcile schedule ↔ receipt, over/under-payment rules, **Initial Allocation** posting net of
-      fees, maker-checker. FR-CON-005, FR-CON-006
+- [x] Reconcile schedule ↔ receipt, over/under-payment rules, **Initial Allocation** posting net of
+      fees, maker-checker. FR-CON-005, FR-CON-006 — done 2026-11-02, see `services/allocations.py`,
+      `routes/staff/contributions/AllocationPanel.tsx`: hold until resolved (receipts must cover schedule + employer fees
+      exactly; excess stays on the receipt), fees by payer, pending allocations hold receipt money, re-checks at approval.
+      pytest 8 new (known answers), live run on dev UMB01 (ledger ties), screenshots 1440 + 390 viewed.
+      Gaps: DB-fund contributions (Dr 1000 / Cr 4000) refused until DB administration; per-employer mismatch rules
+      (refund / carry forward / bill arrears) not configurable yet — "hold" is the only rule.
 - [ ] Allocation reversals. FR-CON-007
 - [ ] Expected schedules, arrears per employer/month, late-payment interest, ageing buckets.
       FR-CON-002, FR-CON-008, FR-MEM-012

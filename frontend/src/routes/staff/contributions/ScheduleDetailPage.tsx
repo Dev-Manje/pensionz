@@ -28,6 +28,8 @@ import { RowActions } from "../../../components/RowActions";
 import { StatusChip } from "../../../components/StatusChip";
 import { TableStateRow } from "../../../components/TableStateRow";
 import { useFeedback } from "../../../components/feedback/FeedbackProvider";
+import { useAuth } from "../../../auth/AuthContext";
+import { AllocationPanel } from "./AllocationPanel";
 import { useSchedule, useScheduleChange } from "../../../queries/schedules";
 import { downloadScheduleTemplate, type Schedule, type ScheduleLine } from "../../../api/schedules";
 import { formatAmount, formatMoney } from "../../../utils/format";
@@ -125,6 +127,7 @@ function Totals({ s }: { s: Schedule }) {
 
 export function ScheduleDetailPage() {
   const { scheduleId } = useParams();
+  const { user } = useAuth();
   const query = useSchedule(scheduleId);
   const change = useScheduleChange(scheduleId ?? "");
   const feedback = useFeedback();
@@ -137,6 +140,7 @@ export function ScheduleDetailPage() {
     return <Alert severity="error" action={<Button color="inherit" onClick={() => query.refetch()}>Retry</Button>}>{query.error?.message ?? "Couldn't load the schedule."}</Alert>;
   }
   const s = query.data;
+  const isMaker = user?.roles.includes("contributions_officer") ?? false;
   const lines = problemsOnly ? s.lines.filter((l) => l.errors.length || l.warnings.length) : s.lines;
 
   async function run(a: Parameters<typeof change.mutateAsync>[0], done: string) {
@@ -196,10 +200,11 @@ export function ScheduleDetailPage() {
         <Alert severity="warning">{s.warning_count} line{s.warning_count === 1 ? " has" : "s have"} warnings — check them; they don't stop the schedule.</Alert>
       )}
       {s.status === "ready" && (
-        <Alert severity="info">Submitted {s.submitted_at ? formatDateTime(s.submitted_at) : ""}{s.submitted_by ? ` by ${s.submitted_by}` : ""}. It's ready to be matched to the money received and allocated.</Alert>
+        <Alert severity="info">Submitted {s.submitted_at ? formatDateTime(s.submitted_at) : ""}{s.submitted_by ? ` by ${s.submitted_by}` : ""}. Match it to the money received below.</Alert>
       )}
 
       <Totals s={s} />
+      <AllocationPanel schedule={s} canAllocate={isMaker} />
 
       <Paper>
         <Stack direction="row" sx={{ px: 2, pt: 1.5, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 1 }}>

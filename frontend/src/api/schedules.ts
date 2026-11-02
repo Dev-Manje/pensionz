@@ -1,4 +1,5 @@
 import { apiFetch, downloadFile } from "./client";
+import type { Approval } from "./types";
 
 export type ScheduleStatus = "draft" | "ready" | "allocated" | "cancelled";
 
@@ -114,4 +115,48 @@ export function saveScheduleLine(id: string, lineId: string | null, body: Schedu
 
 export function removeScheduleLine(id: string, lineId: string) {
   return apiFetch<Schedule>(`/schedules/${id}/lines/${lineId}`, { method: "DELETE" });
+}
+
+export interface FeeLine {
+  code: string;
+  name: string;
+  fee_type: string;
+  payer: "member" | "employer";
+  rate: string;
+  amount: string;
+  gl_code: string;
+}
+
+export interface AllocationSummary {
+  id: string;
+  status: "pending_approval" | "posted" | "rejected" | "cancelled" | "reversed";
+  amount: string;
+  net_to_members: string;
+  journal_reference: string | null;
+  approval_request_id: string | null;
+  created_by: string | null;
+  approved_by: string | null;
+  posted_at: string | null;
+  receipts: string[];
+}
+
+export interface AllocationPreview {
+  schedule_total: string;
+  member_fees: string;
+  employer_fees: string;
+  needed: string;
+  net_to_members: string;
+  fees: FeeLine[];
+  candidates: { receipt_id: string; receipt_number: string; value_date: string; amount: string; available: string; suggested: string }[];
+  available_total: string;
+  blocker: string | null;
+  allocations: AllocationSummary[];
+}
+
+export function getAllocationPreview(id: string) {
+  return apiFetch<AllocationPreview>(`/schedules/${id}/allocation`);
+}
+
+export function allocateSchedule(id: string, receipts: { receipt_id: string; amount: string }[] | null) {
+  return apiFetch<Approval>(`/schedules/${id}/allocate`, { method: "POST", body: JSON.stringify({ receipts }) });
 }

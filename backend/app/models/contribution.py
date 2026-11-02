@@ -170,3 +170,55 @@ class ContributionScheduleLine(UUIDPKMixin, Base):
     @property
     def total(self) -> Decimal:
         return self.employee + self.employer + self.voluntary + self.severance
+
+
+class AllocationStatus(str, enum.Enum):
+    pending_approval = "pending_approval"
+    posted = "posted"
+    rejected = "rejected"
+    cancelled = "cancelled"
+    # Undone by a reversal entry (FR-CON-007).
+    reversed = "reversed"
+
+
+class ContributionAllocation(UUIDPKMixin, TimestampMixin, Base):
+    """Allocation of a ready schedule to members (legacy "Initial Allocation",
+    FR-CON-005): the employer's confirmed receipts pay for it exactly — the
+    schedule total plus any fees the employer pays on top ("hold until
+    resolved", decided 2026-11-02). Members are credited net of fees they bear."""
+
+    __tablename__ = "contribution_allocation"
+
+    fund_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("fund.id"), nullable=False, index=True)
+    scheme_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("scheme.id"), nullable=False, index=True)
+    schedule_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("contribution_schedule.id"), nullable=False, index=True)
+    status: Mapped[AllocationStatus] = mapped_column(str_enum(AllocationStatus, 20), nullable=False, index=True)
+    # Schedule total (what members' contributions add up to).
+    schedule_total: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    # Fees taken out of members' contributions.
+    member_fees: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal("0"))
+    # Fees the employer pays on top of the schedule.
+    employer_fees: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=Decimal("0"))
+    # Money taken from receipts = schedule total + employer fees.
+    amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    # Credited to members = schedule total − member fees.
+    net_to_members: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    # [{"code", "name", "fee_type", "payer", "rate", "amount", "gl_code"}]
+    fees: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    approval_request_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    journal_entry_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("journal_entry.id"), nullable=True)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=True)
+    approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=True)
+    posted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    receipts: Mapped[list["AllocationReceipt"]] = relationship(lazy="selectin", cascade="all, delete-orphan")
+
+
+class AllocationReceipt(UUIDPKMixin, Base):
+    """How much of which receipt pays for an allocation."""
+
+    __tablename__ = "contribution_allocation_receipt"
+
+    allocation_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("contribution_allocation.id", ondelete="CASCADE"), nullable=False, index=True)
+    receipt_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("contribution_receipt.id"), nullable=False, index=True)
+    amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)

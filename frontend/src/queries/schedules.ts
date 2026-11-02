@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  createSchedule, getSchedule, listSchedules, removeScheduleLine, saveScheduleLine, scheduleAction, uploadNewSchedule, uploadScheduleFile,
+  allocateSchedule, createSchedule, getAllocationPreview, getSchedule, listSchedules, removeScheduleLine, saveScheduleLine, scheduleAction, uploadNewSchedule, uploadScheduleFile,
   type Schedule, type ScheduleFilters, type ScheduleLineInput,
 } from "../api/schedules";
 
@@ -54,6 +54,23 @@ export function useScheduleChange(id: string) {
     onSuccess: (data) => {
       qc.setQueryData(scheduleKeys.detail(id), data);
       qc.invalidateQueries({ queryKey: ["schedules", "list"] });
+      qc.invalidateQueries({ queryKey: ["schedules", "allocation", id] });
+    },
+  });
+}
+
+export function useAllocationPreview(id: string, enabled: boolean) {
+  return useQuery({ queryKey: ["schedules", "allocation", id], queryFn: () => getAllocationPreview(id), enabled });
+}
+
+export function useAllocate(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (receipts: { receipt_id: string; amount: string }[] | null) => allocateSchedule(id, receipts),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: scheduleKeys.all });
+      qc.invalidateQueries({ queryKey: ["receipts"] });
+      qc.invalidateQueries({ queryKey: ["approvals"] });
     },
   });
 }
