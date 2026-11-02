@@ -10,12 +10,13 @@ import { LoadingState } from "../../../components/LoadingState";
 import { PageHeader } from "../../../components/PageHeader";
 import { useUrlParam, useUrlTab } from "../../../hooks/useUrlState";
 import { useFunds } from "../../../queries/funds";
+import { ArrearsTab } from "./ArrearsTab";
 import { ReceiptDetailPage } from "./ReceiptDetailPage";
 import { ReceiptsTab } from "./ReceiptsTab";
 import { ScheduleDetailPage } from "./ScheduleDetailPage";
 import { SchedulesTab } from "./SchedulesTab";
 
-const TABS = ["receipts", "schedules"] as const;
+const TABS = ["receipts", "schedules", "arrears"] as const;
 type ContributionsTab = (typeof TABS)[number];
 
 // Contributions back office (FR-CON): money in, schedules, allocation and arrears per fund.
@@ -47,9 +48,11 @@ function ContributionsHome() {
           <Tabs value={tab} onChange={(_, v: ContributionsTab) => setTab(v)} variant="scrollable" scrollButtons={false}>
             <Tab value="receipts" label="Money received" />
             <Tab value="schedules" label="Schedules" />
+            <Tab value="arrears" label="Arrears" />
           </Tabs>
           {fundId && tab === "receipts" && <ReceiptsTab fundId={fundId} />}
           {fundId && tab === "schedules" && <SchedulesTab fundId={fundId} />}
+          {fundId && tab === "arrears" && <ArrearsTab fundId={fundId} />}
         </Stack>
       )}
     </>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
@@ -18,6 +19,8 @@ import { useMemberLedger } from "../../../queries/ledger";
 import { formatAmount, formatMoney } from "../../../utils/format";
 import { formatDate, formatPeriod } from "../../../utils/date";
 import { COMPONENT_LABELS } from "../../../api/ledger";
+import { getMemberArrears } from "../../../api/arrears";
+import { AgeingTiles } from "../contributions/ArrearsTab";
 import type { Member } from "../../../api/types";
 
 // The member's account (FR-ACC-001, FR-CON-001): balance per contribution
@@ -26,6 +29,7 @@ export function MemberTransactionsTab({ member }: { member: Member }) {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(50);
   const query = useMemberLedger(member.id, page, pageSize);
+  const owed = useQuery({ queryKey: ["arrears", "member", member.id], queryFn: () => getMemberArrears(member.id), enabled: !!member.company.employer_code });
 
   if (query.isLoading) return <LoadingState />;
   if (query.error || !query.data) {
@@ -36,6 +40,7 @@ export function MemberTransactionsTab({ member }: { member: Member }) {
     );
   }
   const data = query.data;
+  const unpaid = (owed.data?.months ?? []).filter((m) => Number(m.arrears) && m.days_overdue);
 
   return (
     <Stack spacing={2}>
@@ -47,6 +52,20 @@ export function MemberTransactionsTab({ member }: { member: Member }) {
           {formatMoney(data.balance)}
         </Typography>
       </Paper>
+
+      {owed.data && (
+        <Paper sx={{ p: { xs: 2, sm: 3 } }}>
+          <Typography variant="overline" color="text.secondary">Employer contributions in arrears</Typography>
+          <Typography variant="h6" component="p" sx={{ fontWeight: 600, mb: 1.5 }}>{formatMoney(owed.data.total_arrears)}</Typography>
+          <AgeingTiles buckets={owed.data.ageing} />
+          {unpaid.length > 0 && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+              Unpaid: {unpaid.slice(0, 6).map((m) => `${formatPeriod(m.month)} (${formatAmount(m.arrears)})`).join(" · ")}
+              {unpaid.length > 6 ? ` · and ${unpaid.length - 6} earlier months` : ""}
+            </Typography>
+          )}
+        </Paper>
+      )}
 
       {data.components.length > 0 && (
         <TableContainer component={Paper}>

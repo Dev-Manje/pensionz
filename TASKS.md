@@ -282,8 +282,17 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       `AllocationPanel.tsx`: maker-checker (kind `allocation_reversal`), mirrors the entry with type 2 per member,
       money back to the receipts, schedule back to ready; refused if a member no longer holds the money. pytest 4 new,
       live reversal on dev UMB01 (books back to the pre-allocation position), screenshots viewed.
-- [ ] Expected schedules, arrears per employer/month, late-payment interest, ageing buckets.
-      FR-CON-002, FR-CON-008, FR-MEM-012
+- [x] Expected schedules, arrears per employer/month, late-payment interest, ageing buckets.
+      FR-CON-002, FR-CON-008, FR-MEM-012 — done 2026-11-02, see `services/arrears.py`, `api/v1/arrears.py`,
+      `routes/staff/contributions/ArrearsTab.tsx`, arrears block on the member Transactions tab: expected (rates × salary
+      on record) vs paid (allocated schedules) per employer-month, due = contribution day of next month, ageing
+      1–30…over 150 days, interest at `late_payment_interest_pct` in force on the due date (calculated, not posted).
+      pytest 6 new (known answers), dev UMB01 figures checked, screenshots 1440 + 390 viewed.
+- [ ] Contributions follow-ups (found while building Phase 4): post late-payment interest (Dr 1200 / Cr 4300) once
+      finance confirms the recipe; arrears reminders/escalation to POs (Phase 5 notifications); Registrar report of
+      non-compliant employers (Phase 10 reports); trace employer transfers in expected contributions
+      (`member_assignment`); configurable per-employer mismatch rules (refund / carry forward / bill) beyond "hold";
+      DB-fund contribution posting.
 - [ ] Contribution receipt/acknowledgement PDF. FR-CON-010
 
 ## Phase 5 — Principal officer portal (FR-PRT-001, 005, 006)

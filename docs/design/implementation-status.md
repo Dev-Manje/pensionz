@@ -412,3 +412,17 @@ the allocation credited (money paid out or moved since). Apply: `ledger.reverse`
 month with type 2 "Reversal Initial Allocation" per member transaction (linked by `reverses_transaction_id`), receipts'
 `allocated_amount` released, allocation `reversed`, schedule back to `ready` (re-open → fix → submit → allocate again).
 The preview returns `pending_reversal_approval_id`; the panel shows "Reverse allocation" / the pending request.
+
+### Expected contributions, arrears, interest, ageing (FR-CON-002, FR-CON-008, FR-MEM-012) — 2026-11-02
+
+`services/arrears.py` (no tables — worked out on request, not posted): per employer and contribution month (back to the
+employer's join date or first member, at most 24 months) expected = Σ `schedules.expected_for` (category terms × salary on
+record) for members in service that month (joined by month end, not exited/deceased before it, not currently inactive,
+current employer only); paid = Σ gross lines of **allocated** schedules (reversed allocations drop out); arrears =
+expected − paid once past the due date (employer's contribution day in the following month, clipped to month length).
+Status paid / part_paid / unpaid / not_due; age buckets 1–30, 31–60, 61–90, 91–120, 121–150, over 150 days; interest =
+arrears × `late_payment_interest_pct` (in force on the due date) × days / 365, None when no rate. Members without a salary
+are counted ("without salary") and contribute nothing to expected.
+API: `GET /funds/{id}/arrears[?as_at=&scheme_id=]`, `GET /funds/{id}/expected-contributions?scheme_id=&month=` (the
+expected schedule), `GET /members/{id}/arrears`. Frontend: Contributions → "Arrears" tab (total, ageing tiles, employer
+rows expanding to months); member Transactions tab shows the employer arrears for the member with ageing.
