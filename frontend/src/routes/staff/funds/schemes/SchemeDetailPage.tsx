@@ -39,6 +39,15 @@ function Details({ scheme }: { scheme: Scheme }) {
         <DetailField label="TPIN">{scheme.tpin}</DetailField>
         <DetailField label="Joined the fund">{scheme.join_date && formatDate(scheme.join_date)}</DetailField>
         {scheme.exit_date && <DetailField label="Left the fund">{formatDate(scheme.exit_date)}</DetailField>}
+        <DetailField label="KYC">
+          {scheme.kyc.party_name ? `${scheme.kyc.party_name} — ${scheme.kyc.label}` : "No approved KYC linked"}
+          {scheme.kyc.review_due && ` (review due ${formatDate(scheme.kyc.review_due)})`}
+        </DetailField>
+        <DetailField label="Members">
+          <Link component={RouterLink} to={`/members?fund=${scheme.fund_id}&employer=${scheme.id}`}>
+            {scheme.member_count === 1 ? "1 member" : `${scheme.member_count} members`}
+          </Link>
+        </DetailField>
       </DetailSection>
       <DetailSection title="Contributions">
         <DetailField label="Due by">{dueDayLabel(scheme.contribution_day)}</DetailField>

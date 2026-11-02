@@ -8,13 +8,16 @@ from sqlalchemy.orm import Session
 from app.api.deps import client_ip, get_current_user
 from app.api.v1.approvals import _name
 from app.core.database import get_db
-from app.models.identity import User
+from app.models.identity import User, UserRole
 from app.models.kyc import ApplicationStatus, ClientType, KycApplication, KycDocument, Party
 from app.schemas.kyc import (
     ApplicationCreate, ApplicationOut, ApplicationSave, ApplicationSummary, ApproveIn, DeclarationOut, DocTypeOut, DocumentOut, ExpiringOut,
     DocumentReviewIn, NoteIn, PartyRef, SeniorDecisionIn, SlotOut, SubmitIn,
 )
 from app.services import kyc, kyc_expiry, kyc_forms
+
+# Setup staff who link employers and members to approved clients.
+PARTY_PICKERS = (UserRole.scheme_config_maker, UserRole.scheme_config_checker, UserRole.member_admin, UserRole.member_checker)
 
 router = APIRouter(prefix="/kyc", tags=["kyc"])
 
@@ -213,11 +216,14 @@ def list_expiring(within_days: int = 60, db: Session = Depends(get_db), user: Us
 
 
 @router.get("/parties", response_model=list[PartyRef])
-def list_parties(q: str | None = None, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> list[PartyRef]:
+def list_parties(q: str | None = None, client_type: ClientType | None = None, db: Session = Depends(get_db),
+                 user: User = Depends(get_current_user)) -> list[PartyRef]:
     """Approved clients (staff only)."""
-    if not kyc.is_staff_reader(user):
+    if not (kyc.is_staff_reader(user) or user.has_any_role(*PARTY_PICKERS)):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "You do not have permission to see clients")
     query = select(Party).order_by(Party.name)
+    if client_type is not None:
+        query = query.where(Party.client_type == client_type)
     if q:
         query = query.where(Party.name.ilike(f"%{q.strip()}%"))
     return [_party(p) for p in db.execute(query.limit(300)).scalars()]

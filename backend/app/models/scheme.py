@@ -56,6 +56,8 @@ class Scheme(UUIDPKMixin, TimestampMixin, Base):
     contact_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     contact_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     contact_phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    # The employer's approved corporate KYC client (FR-ONB-105).
+    party_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("party.id"), nullable=True, index=True)
 
     officers: Mapped[list["SchemeOfficer"]] = relationship(back_populates="scheme", lazy="selectin", cascade="all, delete-orphan")
 

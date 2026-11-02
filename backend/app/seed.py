@@ -3,7 +3,8 @@
 - four invented funds (umbrella DC, stand-alone DC, DB, personal pension) with
   trustees, a bank account, employers and an open processing month, administered
   by every seeded fund-level staff user;
-- working regulatory defaults and a PAYE table — both still to be confirmed.
+- working regulatory defaults and a PAYE table — both still to be confirmed;
+- nine invented members across the employers (one deferred, one inactive).
 
     python -m app.seed      (from backend/)
 
@@ -203,6 +204,54 @@ def seed_fees(db) -> None:
     ])
 
 
+# Invented members: (employer, category, first, last, gender, born, joined, employee no., status).
+MEMBERS = [
+    ("CTE01", "MGT", "Thoko", "Mwale", "female", date(1978, 3, 14), date(2024, 1, 1), "CT0001", "active"),
+    ("CTE01", "STF", "Yamikani", "Phiri", "male", date(1991, 7, 2), date(2024, 1, 1), "CT0102", "active"),
+    ("CTE01", "STF", "Chimwemwe", "Banda", "female", date(1995, 11, 23), date(2024, 6, 1), "CT0117", "active"),
+    ("CTE01", "STF", "Kondwani", "Gondwe", "male", date(1986, 1, 9), date(2024, 1, 1), "CT0043", "deferred"),
+    ("NBL01", "ALL", "Mercy", "Chirwa", "female", date(1983, 5, 30), date(2024, 2, 1), "NB2201", "active"),
+    ("NBL01", "ALL", "Blessings", "Nyirenda", "male", date(1999, 9, 17), date(2025, 3, 1), "NB2378", "active"),
+    ("LSC01", "STF", "Grace", "Kumwenda", "female", date(1974, 12, 5), date(2024, 1, 1), "LS015", "active"),
+    ("LSC01", "STF", "Patrick", "Mbewe", "male", date(1989, 4, 21), date(2024, 1, 1), "LS031", "inactive"),
+    ("MET01", "TCH", "Esnart", "Kalua", "female", date(1980, 8, 11), date(2024, 1, 1), "TCH0007", "active"),
+]
+
+
+def seed_members(db) -> None:
+    from app.models.member import AssignmentReason, Member, MemberAssignment, MemberStatus, MemberStatusChange
+    from app.services.members import _next_account_code, id_key
+
+    for i, (scheme_code, cat_code, first, last, gender, born, joined, emp_no, status) in enumerate(MEMBERS):
+        scheme = db.execute(select(Scheme).where(Scheme.code == scheme_code)).scalar_one()
+        if db.execute(select(Member.id).where(Member.scheme_id == scheme.id, Member.employee_no == emp_no)).first():
+            continue
+        category = db.execute(select(BenefitCategory).where(BenefitCategory.scheme_id == scheme.id, BenefitCategory.code == cat_code)).scalar_one()
+        fund = db.get(Fund, scheme.fund_id)
+        id_number = f"MW{born:%y%m%d}{i:03d}X"
+        member = Member(fund_id=fund.id, scheme_id=scheme.id, category_id=category.id, account_code=_next_account_code(db, fund),
+                        first_name=first, last_name=last, gender=gender, date_of_birth=born, nationality="MW", id_type="NATID",
+                        id_number=id_number, id_number_key=id_key(id_number), employee_no=emp_no, date_joined_fund=joined,
+                        date_joined_employer=joined, mobile=f"+265 99{i} 100 {200 + i}", civil_status_current="married",
+                        physical_address="Area 47, Lilongwe" if i % 2 else "Namiwawa, Blantyre", status=MemberStatus.active,
+                        status_effective=joined, next_of_kin_name=f"{'John' if gender == 'female' else 'Mary'} {last}",
+                        next_of_kin_relationship="SPOUSE")
+        db.add(member)
+        db.flush()
+        db.add(MemberAssignment(member_id=member.id, scheme_id=scheme.id, category_id=category.id, effective_from=joined,
+                                reason=AssignmentReason.joined))
+        db.add(MemberStatusChange(member_id=member.id, from_status=None, to_status=MemberStatus.active, effective_date=joined,
+                                  reason="Joined the fund"))
+        if status != "active":
+            when = date(2026, 6, 30)
+            reason = "Resigned" if status == "deferred" else "Unpaid study leave"
+            db.add(MemberStatusChange(member_id=member.id, from_status=MemberStatus.active, to_status=MemberStatus(status),
+                                      effective_date=when, reason=reason))
+            member.status, member.status_effective = MemberStatus(status), when
+            if status == "deferred":
+                member.exit_date = when
+
+
 # Working defaults until confirmed (TASKS.md → Open decisions → "Regulatory figures").
 REGULATORY_DEFAULTS = {
     "min_employee_contribution_pct": "5", "min_employer_contribution_pct": "10", "max_lump_sum_pct": "50",
@@ -248,6 +297,7 @@ def main() -> None:
         seed_options(db)
         seed_categories(db)
         seed_fees(db)
+        seed_members(db)
         db.commit()
     print(f"Seed complete: {created} user(s), {funds} fund(s) created (password for all: {DEV_PASSWORD}).")
 

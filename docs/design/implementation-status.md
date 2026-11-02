@@ -226,3 +226,34 @@ Migration `e7b3c9a14d52`: `declaration_version`, `party`, `kyc_application`, `ky
   the outstanding-items list, review page (risk, declaration, duplicates, answers, sticky actions).
 - Robustness fixes: `tzdata` pinned (zoneinfo had no Africa/Blantyre on Windows); the app keeps the session
   and retries when the server is briefly unreachable instead of signing the user out.
+
+## Phase 3 — Membership (FR-MEM)
+
+### Member record, lifecycle, duplicates, KYC link (FR-MEM-001…005, 011, FR-ONB-105) — 2026-11-02
+
+Migration `a1c4e8f27b93`: `member` (fund, optional scheme + category, optional KYC `party`; account code unique
+per fund from sequence `member_number_seq` → `<fund code><6 digits>` unless given; legacy identifiers, names,
+ID with normalised `id_number_key`, civil statuses, places by Setup-list id, contact, bank, next of kin, join
+dates, status + effective date, exit date, date of death, `regulatory_data` JSONB), `member_status_change`,
+`member_assignment` (employer/category periods), `scheme.party_id`.
+`services/members.py`:
+- approval kinds `member_new`, `member_update` (data correction), `member_status` — checker `member_checker`,
+  fund-scoped; payload shows readable values (names, labels, dates) with raw values under `_values`;
+- rules: fund active; employer active and in the fund, category active and of that employer with terms in force on
+  the join date, entry ages; personal pension / minors' trust have no employer and personal pensions need an
+  individual KYC client; DOB past, join not future; TA/village/branch consistency; group accounts in the same fund;
+  same ID in the same fund or a pending request → 409;
+- `find_duplicates` across funds (ID or name + DOB) — `GET /members/duplicates`, shown live and to the checker;
+- `TRANSITIONS`, `ACTIVITIES` / `allows()`; leaving statuses set the exit date, deceased the date of death;
+- `kyc_status` / `payment_block` (none, review overdue, accepted document expired), `prefill_from_party`,
+  `company_info` (employer, corporate form from its KYC, TPIN, fund);
+- `funds.fund_has_members` now real (fund code/type lock).
+API: `GET /members` (paged, search name/code/employee/old no./ID, fund/employer/status/group filters),
+`POST /funds/{id}/members`, `GET|PUT /members/{id}`, `POST /members/{id}/status`, `GET /members/kyc-prefill/{party}`;
+`GET /kyc/parties?client_type=` now open to setup and member staff. ID and bank numbers masked outside
+`SENSITIVE_ROLES`.
+Frontend: sidebar "Members" — list (filters in the URL, paging), `/members/new` 6-step stepper reusing the KYC field
+renderer (draft kept in localStorage), `/members/<id>` tabs Main information / Member information / Company info /
+KYC / Regulatory Authority Data / History, "Correct details", "Change status" dialog. Employer form: KYC client
+picker; employer page shows KYC standing and member count. `StatusChip` takes an optional `label`.
+Seed: nine invented members across CTE01, NBL01, LSC01, MET01 (one deferred, one inactive).

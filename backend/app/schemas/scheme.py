@@ -29,6 +29,8 @@ class SchemeIn(_Clean):
     contact_email: EmailStr | None = None
     contact_phone: str | None = Field(default=None, max_length=40)
     officer_ids: list[uuid.UUID] = Field(default_factory=list, max_length=50)
+    # Approved corporate KYC client for this employer (FR-ONB-105).
+    party_id: uuid.UUID | None = None
 
     @field_validator("code")
     @classmethod
@@ -81,4 +83,7 @@ class SchemeOut(SchemeSummaryOut):
     contact_email: str | None
     contact_phone: str | None
     officers: list[OfficerOut]
+    party_id: uuid.UUID | None
+    kyc: dict
+    member_count: int
     can_edit: bool

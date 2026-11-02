@@ -15,6 +15,7 @@ import { FormGrid, FormSection } from "../../../../components/form/FormLayout";
 import { useFeedback } from "../../../../components/feedback/FeedbackProvider";
 import { useFund } from "../../../../queries/funds";
 import { useOfficerCandidates, useProposeScheme, useScheme } from "../../../../queries/schemes";
+import { useParties } from "../../../../queries/members";
 import {
   BILLING_FREQUENCY_LABELS,
   type BillingFrequency,
@@ -51,6 +52,7 @@ const EMPTY: SchemeInput = {
   contact_email: null,
   contact_phone: null,
   officer_ids: [],
+  party_id: null,
 };
 
 function toInput(s: Scheme): SchemeInput {
@@ -79,6 +81,8 @@ function SchemeForm({ fund, scheme }: { fund: Fund; scheme: Scheme | null }) {
   const feedback = useFeedback();
   const propose = useProposeScheme(fund.id);
   const candidates = useOfficerCandidates();
+  const parties = useParties("corporate");
+  const partyOptions = parties.data ?? [];
   const [form, setForm] = useState<SchemeInput>(() => (scheme ? toInput(scheme) : { ...EMPTY }));
   const [error, setError] = useState<string | null>(null);
   const backTo = scheme ? `/funds/${fund.id}/employers/${scheme.id}` : `/funds/${fund.id}?tab=employers`;
@@ -193,6 +197,20 @@ function SchemeForm({ fund, scheme }: { fund: Fund; scheme: Scheme | null }) {
             {text("contact_email", "Contact email", { type: "email" })}
             {text("contact_phone", "Contact phone", { type: "tel" })}
           </FormGrid>
+        </FormSection>
+
+        <FormSection title="KYC client" description="The employer's approved corporate KYC (FR-ONB-105). Approve the organisation under KYC first.">
+          <Autocomplete
+            options={partyOptions}
+            loading={parties.isLoading}
+            value={partyOptions.find((p) => p.id === form.party_id) ?? null}
+            onChange={(_, p) => set("party_id", p?.id ?? null)}
+            getOptionLabel={(p) => `${p.name}${p.identifier ? ` (${p.identifier})` : ""}`}
+            isOptionEqualToValue={(a, b) => a.id === b.id}
+            renderInput={(params) => (
+              <TextField {...params} label="Approved organisation" helperText={parties.error ? `Couldn't load KYC clients: ${parties.error.message}` : "Optional until the organisation's KYC is approved."} error={!!parties.error} />
+            )}
+          />
         </FormSection>
 
         <FormSection title="Principal officers" description="People at the employer who remit contributions and manage members in the portal.">

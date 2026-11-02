@@ -1,7 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_roles, require_staff
@@ -9,10 +9,12 @@ from app.api.v1.approvals import to_out
 from app.core.database import get_db
 from app.models.fund import Fund
 from app.models.identity import User, UserRole
+from app.models.member import Member
 from app.models.scheme import Scheme
 from app.schemas.approval import ApprovalOut
 from app.schemas.scheme import OfficerOut, SchemeIn, SchemeOut, SchemeSummaryOut
 from app.services import fund_access
+from app.services import members as member_service
 from app.services import schemes as scheme_service
 
 router = APIRouter(tags=["schemes"])
@@ -71,6 +73,8 @@ def get_scheme(scheme_id: uuid.UUID, db: Session = Depends(get_db), user: User =
         **{f: getattr(s, f) for f in ("registration_number", "tpin", "join_date", "exit_date", "address_line1", "address_line2",
                                       "address_line3", "phone", "email", "contact_email", "contact_phone")},
         officers=sorted((_officer(o.user) for o in s.officers), key=lambda o: o.full_name.lower()),
+        party_id=s.party_id, kyc=member_service.kyc_status(db, s.party_id),
+        member_count=db.execute(select(func.count()).select_from(Member).where(Member.scheme_id == s.id)).scalar_one(),
         can_edit=user.has_role(UserRole.scheme_config_maker),
     )
 

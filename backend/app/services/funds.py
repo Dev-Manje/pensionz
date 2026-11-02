@@ -42,8 +42,9 @@ TYPE_LABELS = {
 
 
 def fund_has_members(db: Session, fund: Fund) -> bool:
-    # Members arrive in Phase 3 (FR-MEM); until then no fund has any.
-    return False
+    from app.services.members import has_members
+
+    return has_members(db, fund.id)
 
 
 def locked_fields(db: Session, fund: Fund) -> list[str]:

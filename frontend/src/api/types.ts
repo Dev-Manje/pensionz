@@ -340,6 +340,9 @@ export interface Scheme extends SchemeSummary, SchemeDetails {
   fund_code: string;
   fund_name: string;
   officers: SchemeOfficer[];
+  party_id: string | null;
+  kyc: KycStanding;
+  member_count: number;
   can_edit: boolean;
 }
 
@@ -352,6 +355,7 @@ export interface SchemeInput extends SchemeDetails {
   billing_frequency: BillingFrequency;
   contact_name: string | null;
   officer_ids: string[];
+  party_id: string | null;
 }
 
 // ---- Regulatory parameters & tax tables (FR-CFG-009)
@@ -680,4 +684,110 @@ export interface Declaration {
   version: number;
   title: string;
   body: string;
+}
+
+// ---- Members (FR-MEM)
+
+export type MemberStatus = "active" | "inactive" | "deferred" | "pensioner" | "exited" | "deceased";
+
+export const MEMBER_STATUS_LABELS: Record<MemberStatus, string> = {
+  active: "Active",
+  inactive: "Inactive",
+  deferred: "Deferred (paid-up)",
+  pensioner: "Pensioner",
+  exited: "Exited",
+  deceased: "Deceased",
+};
+
+export interface MemberSummary {
+  id: string;
+  fund_id: string;
+  fund_code: string;
+  account_code: string;
+  full_name: string;
+  employee_no: string | null;
+  id_number_masked: string | null;
+  date_of_birth: string;
+  employer_code: string | null;
+  category_code: string | null;
+  status: MemberStatus;
+  date_joined_fund: string;
+  pending_approval_id: string | null;
+}
+
+export interface MemberPage {
+  items: MemberSummary[];
+  total: number;
+}
+
+// KYC standing of a member or employer; payment_block says why benefits can't be paid.
+export interface KycStanding {
+  state: "none" | "current" | "review_overdue" | "document_expired";
+  label: string;
+  party_id?: string | null;
+  party_name?: string | null;
+  risk_rating?: string | null;
+  review_due?: string | null;
+  application_id?: string | null;
+  application_reference?: string | null;
+  payment_block?: string | null;
+}
+
+export interface MemberStatusChange {
+  id: string;
+  from_status: MemberStatus | null;
+  to_status: MemberStatus;
+  effective_date: string;
+  reason: string;
+  requested_by: string | null;
+  approved_by: string | null;
+  created_at: string;
+}
+
+export interface MemberAssignment {
+  id: string;
+  employer: string | null;
+  category: string | null;
+  effective_from: string;
+  effective_to: string | null;
+  reason: "joined" | "category_move" | "employer_transfer";
+  note: string | null;
+}
+
+export type MemberValues = Record<string, unknown>;
+
+export interface Member {
+  id: string;
+  sensitive: boolean;
+  fields: MemberValues;
+  labels: Record<string, string | null>;
+  fund: { id: string; code: string; name: string; fund_type: FundType };
+  company: {
+    fund_name: string;
+    fund_code: string;
+    owner_name: string | null;
+    employer_code: string | null;
+    corporate_form: string | null;
+    tpin: string | null;
+    registration_number: string | null;
+    employer_kyc: string | null;
+  };
+  kyc: KycStanding;
+  status: MemberStatus;
+  allowed_transitions: MemberStatus[];
+  status_history: MemberStatusChange[];
+  assignments: MemberAssignment[];
+  pending_approval_id: string | null;
+  can_edit: boolean;
+}
+
+export interface MemberDuplicate {
+  member_id: string;
+  account_code: string;
+  full_name: string;
+  date_of_birth: string;
+  fund_code: string;
+  employer: string | null;
+  status: MemberStatus;
+  match: string;
 }

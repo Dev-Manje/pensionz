@@ -204,18 +204,31 @@ Open — the default in *italics* is what we build to until answered (from REQUI
 
 ## Phase 3 — Membership (FR-MEM)
 
-- [ ] Member record with legacy tabs: Main information, Member information, Company info, KYC,
-      Regulatory Authority Data. FR-MEM-001…004
-- [ ] Member status lifecycle (Active, Inactive, Deceased + Deferred, Pensioner, Exited) with
-      audited transitions. FR-MEM-005
+- [x] Member record with legacy tabs: Main information, Member information, Company info, KYC,
+      Regulatory Authority Data. FR-MEM-001…004 — done 2026-11-02, see `services/members.py`, migration
+      `a1c4e8f27b93`, `routes/staff/members/`: maker-checker (`member_new` / `member_update`, member checker,
+      fund-scoped); generated account code `<fund code><6 digits>` unless given; eligibility against the
+      category terms on the join date (entry ages); no employer/category for personal pension & minors' trust;
+      ID number and bank account masked for roles outside `SENSITIVE_ROLES`; 6-step capture stepper with
+      browser draft; regulatory tab = UPID / BI UPID + free name/value pairs (default until the field list is known).
+- [x] Member status lifecycle (Active, Inactive, Deceased + Deferred, Pensioner, Exited) with
+      audited transitions. FR-MEM-005 — done 2026-11-02: `TRANSITIONS` (exited/deceased final), approval kind
+      `member_status`, effective date + reason, exit date / date of death set, `member_status_change` history,
+      `members.allows(status, activity)` for later phases (contributions only when active).
 - [ ] Beneficiaries (shares = 100%, guardians for minors, history). FR-MEM-008
 - [ ] Salary & service history. FR-MEM-009
 - [ ] **Bulk member upload template** (design, download, validate, row errors, maker-checker
       import) + printable new-member application form. FR-MEM-006, FR-MEM-007
 - [ ] Category moves, employer transfers, data corrections via change requests. FR-MEM-010
-- [ ] Duplicate detection. FR-MEM-011
-- [ ] Link approved KYC parties: corporate → participating employer (scheme), individual → member /
-      personal-pension holder; block benefit payments against expired KYC. FR-ONB-105
+- [x] Duplicate detection. FR-MEM-011 — done 2026-11-02: same ID number (normalised) or same name + date of
+      birth across all funds; live warning in the form, listed for the checker; same ID in the same fund (or a
+      pending new member) → 409.
+- [x] Link approved KYC parties: corporate → participating employer (scheme), individual → member /
+      personal-pension holder; block benefit payments against expired KYC. FR-ONB-105 — done 2026-11-02:
+      `scheme.party_id` in the employer snapshot (corporate only), `member.party_id` (individual only, one
+      membership per client per fund, required for personal pensions), "Fill in from KYC" prefill;
+      `members.kyc_status` / `payment_block` (no KYC, review overdue, accepted document expired) for Phases 8/9.
+      pytest 20 new, smoke 16/16, screenshots viewed.
 
 ## Phase 4 — Ledger & contributions (FR-ACC core, FR-CON)
 

@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.models.approval import ApprovalRequest, ApprovalStatus
 from app.models.fund import Fund, FundStatus
 from app.models.identity import User, UserRole, UserStatus
+from app.models.kyc import ClientType, Party
 from app.models.scheme import BillingFrequency, Scheme, SchemeOfficer, SchemeStatus
 from app.schemas.scheme import SchemeIn
 from app.services import approvals, audit
@@ -24,7 +25,7 @@ SCHEME_FIELDS = (
     "code", "name", "status", "registration_number", "tpin", "join_date", "exit_date",
     "contribution_day", "billing_frequency",
     "address_line1", "address_line2", "address_line3", "phone", "email",
-    "contact_name", "contact_email", "contact_phone",
+    "contact_name", "contact_email", "contact_phone", "party_id",
 )
 
 
@@ -58,7 +59,16 @@ def officer_candidates(db: Session) -> list[User]:
     ).scalars().unique())
 
 
+def _check_party(db: Session, party_id: uuid.UUID | None) -> None:
+    if party_id is None:
+        return
+    party = db.get(Party, party_id)
+    if party is None or party.client_type != ClientType.corporate:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Link an approved corporate KYC client")
+
+
 def _proposed(db: Session, data: SchemeIn) -> dict:
+    _check_party(db, data.party_id)
     officers = []
     for user_id in dict.fromkeys(data.officer_ids):  # de-duplicated, order kept
         user = db.get(User, user_id)
@@ -135,6 +145,7 @@ def _values(data: dict) -> dict:
     values["billing_frequency"] = BillingFrequency(values["billing_frequency"])
     for f in ("join_date", "exit_date"):
         values[f] = date.fromisoformat(values[f]) if values[f] else None
+    values["party_id"] = uuid.UUID(values["party_id"]) if values.get("party_id") else None
     return values
 
 
