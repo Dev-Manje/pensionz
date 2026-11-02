@@ -284,3 +284,27 @@ target employer active and in the fund (a different employer only in an umbrella
 assignment's start and not in the future. Approval closes the open `member_assignment` the day before, opens the new
 one with the reason, updates the member (and for transfers the employer join date and optional new employee number).
 Data corrections remain `member_update`. Frontend: "Move / transfer" (umbrella) or "Move category" dialog on the member page.
+
+### Bulk member upload and application form (FR-MEM-006, 007) — 2026-11-02
+
+Migration `c9e4a1d7f205`: `member_import` (fund, employer, file name, status validated / pending_approval / imported /
+rejected / cancelled, `rows` JSONB with raw values, converted values, errors, warnings and the created member, counts).
+`services/io/member_import.py`:
+- `COLUMNS` defines the template (labels are the file's contract; required marked *); `template()` adds list drop-downs and a
+  Guide sheet (column help, the employer's active categories, titles, ID types, relationships, banks + branches);
+- reading: .xlsx ("Members" sheet or the first) or .csv, header match by label, blank rows skipped, ≤ 2,000 rows, ≤ 5 MB;
+  values accept codes or names (title, ID type, relationship, nationality, bank/branch), F/M, Excel dates or YYYY-MM-DD /
+  DD/MM/YYYY, amounts with commas;
+- each row: `MemberCreateIn` + `members._check_details` / `_check_employment` / account code / pending requests, then
+  in-file duplicates (same ID or name + DOB → error on the later row); cross-fund duplicates → warnings;
+- a new upload for the same employer by the same maker cancels an unsubmitted earlier one; `errors_workbook()`;
+- `submit` (uploader only) → approval kind `member_import` (member checker; payload lists up to 25 members);
+  approval re-checks each row, creates it via `members.create_member` (+ `member_salary` from the join date when a salary
+  was given) or marks it "Not imported: …"; reject/withdraw → rejected/cancelled.
+`services/io/member_forms.py`: reportlab A4 application form in capture order (employer/fund with category tick boxes when
+an employer is given, personal, address, bank, next of kin, 5-row beneficiary table, declaration, signatures, office use).
+API (registered before `/members/{id}`): `GET /members/import-template?scheme_id=`, `GET /members/application-form[?scheme_id=]`,
+`POST /members/imports` (multipart), `GET /members/imports`, `GET /members/imports/{id}`, `GET …/errors`, `POST …/submit`,
+`POST …/cancel`. `services/members.create_member` is shared by single and bulk creation.
+Frontend: `/members/import` (fund + employer, template / form / upload, results with counts, problem filter, error download,
+submit / withdraw, recent uploads); "Bulk upload" button on the members list.

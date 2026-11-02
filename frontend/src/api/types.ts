@@ -863,3 +863,36 @@ export interface EmploymentRecords {
   service_pending_approval_id: string | null;
   can_edit: boolean;
 }
+
+// ---- Bulk member upload (FR-MEM-006)
+
+export type ImportStatus = "validated" | "pending_approval" | "imported" | "rejected" | "cancelled";
+
+export interface MemberImportSummary {
+  id: string;
+  fund_id: string;
+  scheme_id: string | null;
+  employer: string | null;
+  filename: string;
+  status: ImportStatus;
+  total_rows: number;
+  valid_rows: number;
+  imported_rows: number;
+  uploaded_by: string | null;
+  approval_request_id: string | null;
+  created_at: string;
+}
+
+export interface MemberImportRow {
+  row: number;
+  name: string;
+  raw: Record<string, string | null>;
+  errors: string[];
+  warnings: string[];
+  member_id: string | null;
+}
+
+export interface MemberImport extends MemberImportSummary {
+  rows: MemberImportRow[];
+  can_submit: boolean;
+}

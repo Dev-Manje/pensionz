@@ -1,6 +1,6 @@
-import { apiFetch } from "./client";
+import { apiFetch, downloadFile, openFile } from "./client";
 import type {
-  Approval, BeneficiaryInput, EmploymentRecords, Member, MemberDuplicate, MemberPage, MemberStatus, MemberValues, Nominations, PartyRef,
+  Approval, BeneficiaryInput, MemberImport, MemberImportSummary, EmploymentRecords, Member, MemberDuplicate, MemberPage, MemberStatus, MemberValues, Nominations, PartyRef,
   ServicePeriodInput,
 } from "./types";
 
@@ -46,3 +46,18 @@ export const proposeSalary = (id: string, body: { effective_from: string; basic_
   apiFetch<Approval>(`/members/${id}/salaries`, { method: "POST", body: JSON.stringify(body) });
 export const proposeService = (id: string, body: { periods: ServicePeriodInput[]; reason: string }) =>
   apiFetch<Approval>(`/members/${id}/service`, { method: "PUT", body: JSON.stringify(body) });
+
+// Bulk upload (FR-MEM-006) and the printable application form (FR-MEM-007).
+export const downloadImportTemplate = (schemeId: string) => downloadFile(`/members/import-template?scheme_id=${schemeId}`, "members-template.xlsx");
+export const openApplicationForm = (schemeId?: string | null) => openFile(`/members/application-form${schemeId ? `?scheme_id=${schemeId}` : ""}`);
+export const listImports = (fundId?: string | null) => apiFetch<MemberImportSummary[]>(`/members/imports${fundId ? `?fund_id=${fundId}` : ""}`);
+export const getImport = (id: string) => apiFetch<MemberImport>(`/members/imports/${id}`);
+export const downloadImportErrors = (id: string) => downloadFile(`/members/imports/${id}/errors`, "member-upload-errors.xlsx");
+export function uploadImport(schemeId: string, file: File) {
+  const form = new FormData();
+  form.append("scheme_id", schemeId);
+  form.append("file", file);
+  return apiFetch<MemberImport>("/members/imports", { method: "POST", body: form });
+}
+export const submitImport = (id: string) => apiFetch<Approval>(`/members/imports/${id}/submit`, { method: "POST" });
+export const cancelImport = (id: string) => apiFetch<MemberImportSummary>(`/members/imports/${id}/cancel`, { method: "POST" });

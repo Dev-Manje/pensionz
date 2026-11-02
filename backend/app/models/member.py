@@ -225,3 +225,32 @@ class MemberServicePeriod(UUIDPKMixin, CreatedAtMixin, Base):
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     part_time_factor: Mapped[Decimal] = mapped_column(Numeric(5, 4), nullable=False, default=Decimal("1"))
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class ImportStatus(str, enum.Enum):
+    # Checked; the maker can download the errors and submit the valid rows.
+    validated = "validated"
+    pending_approval = "pending_approval"
+    imported = "imported"
+    rejected = "rejected"
+    # Withdrawn by the maker, or replaced by a fresh upload.
+    cancelled = "cancelled"
+
+
+class MemberImport(UUIDPKMixin, TimestampMixin, Base):
+    """A bulk member upload (FR-MEM-006): every row with its values, errors and
+    warnings. Only rows without errors are imported, after a member checker approves."""
+
+    __tablename__ = "member_import"
+
+    fund_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("fund.id"), nullable=False, index=True)
+    scheme_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("scheme.id"), nullable=True)
+    filename: Mapped[str] = mapped_column(String(200), nullable=False)
+    status: Mapped[ImportStatus] = mapped_column(str_enum(ImportStatus, 20), nullable=False, default=ImportStatus.validated, index=True)
+    # [{"row": 2, "values": {...}, "errors": [...], "warnings": [...], "member_id": null}]
+    rows: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    total_rows: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    valid_rows: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    imported_rows: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    uploaded_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=True)
+    approval_request_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)

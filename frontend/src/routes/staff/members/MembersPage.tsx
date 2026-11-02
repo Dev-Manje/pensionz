@@ -25,13 +25,15 @@ import { MEMBER_STATUS_LABELS, type MemberStatus } from "../../../api/types";
 import { formatDate } from "../../../utils/date";
 import { MemberDetailPage } from "./MemberDetailPage";
 import { MemberFormPage } from "./MemberFormPage";
+import { MemberImportPage } from "./MemberImportPage";
 
-// Membership (FR-MEM): /members, /members/new, /members/<id>, /members/<id>/edit.
+// Membership (FR-MEM): /members, /members/new, /members/import, /members/<id>, /members/<id>/edit.
 export function MembersPage() {
   return (
     <Routes>
       <Route index element={<MemberList />} />
       <Route path="new" element={<MemberFormPage />} />
+      <Route path="import" element={<MemberImportPage />} />
       <Route path=":memberId" element={<MemberDetailPage />} />
       <Route path=":memberId/edit" element={<MemberFormPage />} />
     </Routes>
@@ -86,7 +88,18 @@ function MemberList() {
       <PageHeader
         title="Members"
         description="Members of the funds you administer. New members, corrections and status changes are approved by a member checker."
-        action={canCreate && <Button variant="contained" onClick={() => navigate(fundId ? `/members/new?fund=${fundId}` : "/members/new")}>Add member</Button>}
+        action={
+          canCreate && (
+            <Stack direction="row" spacing={1}>
+              <Button variant="outlined" onClick={() => navigate(fundId ? `/members/import?fund=${fundId}` : "/members/import")}>
+                Bulk upload
+              </Button>
+              <Button variant="contained" onClick={() => navigate(fundId ? `/members/new?fund=${fundId}` : "/members/new")}>
+                Add member
+              </Button>
+            </Stack>
+          )
+        }
       />
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} useFlexGap sx={{ mb: 2, flexWrap: "wrap" }}>
         <TextField size="small" label="Search" placeholder="Name, account code, employee or ID number" value={search} onChange={(e) => setSearch(e.target.value)} sx={{ minWidth: { sm: 320 } }} />

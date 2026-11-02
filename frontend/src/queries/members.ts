@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { findDuplicates, getEmployment, getMember, getNominations, kycPrefill, listMembers, listParties, type MemberFilters } from "../api/members";
+import { findDuplicates, getEmployment, getImport, listImports, getMember, getNominations, kycPrefill, listMembers, listParties, type MemberFilters } from "../api/members";
 
 export const memberKeys = {
   all: ["members"] as const,
@@ -45,4 +45,12 @@ export function useNominations(memberId: string) {
 
 export function useEmployment(memberId: string) {
   return useQuery({ queryKey: ["members", "employment", memberId], queryFn: () => getEmployment(memberId) });
+}
+
+export function useImports(fundId?: string | null) {
+  return useQuery({ queryKey: ["members", "imports", fundId ?? null], queryFn: () => listImports(fundId) });
+}
+
+export function useImport(id: string | null) {
+  return useQuery({ queryKey: ["members", "import", id], queryFn: () => getImport(id!), enabled: !!id });
 }

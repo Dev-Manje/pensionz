@@ -532,7 +532,13 @@ def _apply_new(db: Session, request: ApprovalRequest, checker: User) -> None:
     category_id = uuid.UUID(raw["category_id"]) if raw.get("category_id") else None
     _check_details(db, fund, d, None)
     _check_employment(db, fund, scheme_id, category_id, d["date_joined_fund"], d["date_of_birth"], new=True)
-    code = request.payload.get("_account_code")
+    member = create_member(db, fund, d, scheme_id, category_id, request.payload.get("_account_code"), checker, request)
+    request.entity_id = str(member.id)
+
+
+def create_member(db: Session, fund: Fund, d: dict, scheme_id, category_id, code: str | None, checker: User,
+                  request: ApprovalRequest, *, joined_reason: str = "Joined the fund") -> Member:
+    """Creates an approved member with its first employer/category row and status. Checks must already have passed."""
     if code:
         _check_account_code(db, fund, code)
     else:
@@ -544,10 +550,10 @@ def _apply_new(db: Session, request: ApprovalRequest, checker: User) -> None:
     db.add(MemberAssignment(member_id=member.id, scheme_id=scheme_id, category_id=category_id, effective_from=d["date_joined_fund"],
                             reason=AssignmentReason.joined, approved_by_user_id=checker.id))
     db.add(MemberStatusChange(member_id=member.id, from_status=None, to_status=MemberStatus.active, effective_date=d["date_joined_fund"],
-                              reason="Joined the fund", requested_by_user_id=request.initiated_by_user_id, approved_by_user_id=checker.id,
+                              reason=joined_reason, requested_by_user_id=request.initiated_by_user_id, approved_by_user_id=checker.id,
                               approval_request_id=request.id))
-    request.entity_id = str(member.id)
     audit.record(db, checker.id, "member", member.id, "created", after={**values_of(member), "account_code": code}, fund_id=fund.id)
+    return member
 
 
 def _lock(db: Session, request: ApprovalRequest) -> Member:

@@ -44,6 +44,10 @@ export const STATUS_LABELS: Record<string, string> = {
   passed: "Passed",
   failed: "Failed",
   not_available: "Not checked yet",
+  // bulk uploads
+  validated: "Checked — not submitted",
+  pending_approval: "Awaiting approval",
+  imported: "Imported",
   // approvals and requests
   draft: "Draft",
   pending: "Awaiting approval",
@@ -93,6 +97,9 @@ const TONES: Record<string, StatusTone> = {
   passed: "success",
   failed: "error",
   not_available: "default",
+  validated: "info",
+  pending_approval: "warning",
+  imported: "success",
 };
 
 /** "pending" → "Awaiting approval"; unknown codes become "Sentence case". */

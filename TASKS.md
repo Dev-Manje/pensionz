@@ -224,8 +224,14 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       date = correction, pensionable defaults to basic, active/inactive only, `salary_on`); `member_service_period`
       (kind `member_service`, whole list, no overlaps, one open period, part-time factor, `period_years` = whole
       months ÷ 12 + days ÷ 365.25 × factor). Member tab "Salary & service". pytest 13 new, smoke 12/12, screenshots viewed.
-- [ ] **Bulk member upload template** (design, download, validate, row errors, maker-checker
-      import) + printable new-member application form. FR-MEM-006, FR-MEM-007
+- [x] **Bulk member upload template** (design, download, validate, row errors, maker-checker
+      import) + printable new-member application form. FR-MEM-006, FR-MEM-007 — done 2026-11-02, see
+      `services/io/member_import.py`, `services/io/member_forms.py`, `routes/staff/members/MemberImportPage.tsx`:
+      per-employer .xlsx template (31 columns, required marked *, drop-downs, Guide sheet with allowed codes); .xlsx/.csv
+      upload ≤ 2,000 rows / 5 MB checked with the single-member rules plus duplicates within the file (cross-fund matches
+      are warnings); errors workbook with the reason per row; only valid rows go to the checker (kind `member_import`),
+      approval re-checks each row, skips any now invalid, creates members and the first salary. Printable A4 application
+      form (blank or per employer, with its categories). pytest 6 new, smoke 7/7, screenshots and PDF viewed.
 - [x] Category moves, employer transfers, data corrections via change requests. FR-MEM-010 — done 2026-11-02:
       corrections = `member_update` (slice 1); moves = approval kind `member_move` (active/inactive members, effective
       after the current assignment started and not in the future, target category active with terms in force; another
