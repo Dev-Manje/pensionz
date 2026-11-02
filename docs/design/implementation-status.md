@@ -308,3 +308,30 @@ API (registered before `/members/{id}`): `GET /members/import-template?scheme_id
 `POST …/cancel`. `services/members.create_member` is shared by single and bulk creation.
 Frontend: `/members/import` (fund + employer, template / form / upload, results with counts, problem filter, error download,
 submit / withdraw, recent uploads); "Bulk upload" button on the members list.
+
+## Phase 4 — Ledger & contributions (FR-ACC core, FR-CON)
+
+### Fund ledgers and member transactions (FR-ACC-001…003) — 2026-11-02
+
+Migration `d2a7c4e9b318_ledger.py`; `models/ledger.py`, `services/ledger.py`, `api/v1/ledger.py`.
+- `gl_account` per fund (book `fund`) plus the administrator book (`fund_id` NULL: 1500/1510/4500). The **proposed** chart
+  (pz-accounting, + 2800 Refunds Payable to Employers) is created for a fund on approval of the fund and lazily by
+  `ledger.ensure_chart` — finance still to confirm (open decision).
+- `journal_entry` (running number per book+fund → "JE-000123", entry date, processing month, business event
+  `entity_type`/`entity_id`, `reverses_entry_id` unique) + `ledger_line` (one side only, `member_id`/`scheme_id`/`component`
+  analysis). `member_transaction`: member, transaction type code/name/effect copied at posting, component (employee,
+  employer, voluntary, severance, transfer_in), amount > 0, contribution month, reference, journal entry, `reverses_transaction_id`.
+- Database triggers refuse UPDATE/DELETE on all three tables (FR-ACC-003).
+- `ledger.post(...)`: rounds half-up per line, Σdr = Σcr per fund (500 otherwise), unknown/retired GL code 409, date must be
+  in the fund's open processing month (409). `post_member_transactions(...)` derives each member line pair from the
+  transaction type's GL codes (type 1: Dr 2100 / Cr 2000) and accepts extra lines (fees). `reverse(...)` mirrors every line
+  into the open month and adds the paired reversal type per member transaction; a reversal can't be reversed and an entry is
+  reversed once (409).
+- Balances are always summed: `account_balances`, `member_balance`, `member_balances_by_component`, `tie_out`
+  (Σdr = Σcr and Σ member accounts = GL 2000). `periods.has_postings` now uses the ledger; the month-end check
+  "Fund ledger balanced and ties to member accounts" is live.
+- API (staff with fund access): `GET /funds/{id}/ledger/accounts[?period=]` (trial balance + tie-out),
+  `GET /funds/{id}/ledger/entries?period=&entity_type=&account=&page=`, `GET /members/{id}/transactions`.
+- Frontend: fund **Ledger** tab (`FundLedgerTab.tsx`: proposed-chart notice, tie-out banner, trial balance, journal with
+  expandable lines, filter by account); member **Transactions** tab (`MemberTransactionsTab.tsx`: balance, per-component
+  contributions/bonus/withdrawals, transactions with reversed markers).

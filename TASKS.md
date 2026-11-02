@@ -250,8 +250,11 @@ Open — the default in *italics* is what we build to until answered (from REQUI
 
 ## Phase 4 — Ledger & contributions (FR-ACC core, FR-CON)
 
-- [ ] GL accounts per fund (seed proposed chart), `ledger.post` balanced per fund, member
-      transactions with transaction types, reversals. FR-ACC-001…003
+- [x] GL accounts per fund (seed proposed chart), `ledger.post` balanced per fund, member
+      transactions with transaction types, reversals. FR-ACC-001…003 — done 2026-11-02, see `services/ledger.py`,
+      `routes/staff/funds/FundLedgerTab.tsx`, `routes/staff/members/MemberTransactionsTab.tsx`: chart created per fund,
+      immutable rows (DB triggers), open-month guard, exact reversals, GL 2000 tie-out live in the month-end checklist.
+      pytest 12 new (168 total), vitest 33/33, tsc clean, API 200/403 smoke, screenshots 1440 + 390 viewed.
 - [ ] Receipts (bank, value date, reference, payer) + unallocated suspense. FR-CON-004
 - [ ] Contribution schedules: Excel/CSV template upload + manual capture, row validation, rates ≥
       minimum. FR-CON-001, FR-CON-003

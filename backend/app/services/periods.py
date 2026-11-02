@@ -62,8 +62,9 @@ def require_open(db: Session, fund_id: uuid.UUID, on_date: date) -> FundPeriod:
 
 
 def has_postings(db: Session, fund_id: uuid.UUID, period: date) -> bool:
-    # Transactions arrive with the ledger in Phase 4 (FR-ACC-001); until then no month has any.
-    return False
+    from app.services import ledger
+
+    return ledger.has_postings(db, fund_id, period)
 
 
 # ---- month-end checklist (FR-ACC-006 fills these in as each area is built)
@@ -77,6 +78,19 @@ class Check:
     detail: str | None = None
 
 
+def _ledger_check(db: Session, fund: Fund) -> Check:
+    from app.services import ledger
+
+    t = ledger.tie_out(db, fund.id)
+    name = "Fund ledger balanced and ties to member accounts"
+    if not t.balanced:
+        return Check("ledger_balanced", name, "failed", f"Debits {t.debits:,.2f} ≠ credits {t.credits:,.2f}")
+    if not t.ties:
+        return Check("ledger_balanced", name, "failed",
+                     f"Member credits GL {t.member_credits_gl:,.2f} ≠ member accounts {t.member_sub_ledger:,.2f}")
+    return Check("ledger_balanced", name, "passed", f"Member accounts {t.member_sub_ledger:,.2f} = GL 2000")
+
+
 def checklist(db: Session, fund: Fund, period: FundPeriod) -> list[Check]:
     later = "Checked automatically once this part of the system is built."
     return [
@@ -84,7 +98,7 @@ def checklist(db: Session, fund: Fund, period: FundPeriod) -> list[Check]:
         Check("unallocated_cleared", "Unallocated receipts cleared or explained", "not_available", later),
         Check("bonus_posted", "Bonus / unit pricing for the month posted", "not_available", later),
         Check("bank_reconciled", "Fund bank accounts reconciled", "not_available", later),
-        Check("ledger_balanced", "Fund ledger balanced and ties to member accounts", "not_available", later),
+        _ledger_check(db, fund),
     ]
 
 

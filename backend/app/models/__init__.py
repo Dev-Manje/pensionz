@@ -9,6 +9,7 @@ from app.models.kyc import (
     ApplicationStatus, ClientType, DeclarationVersion, DocumentReview, KycApplication, KycDocument, Party, RiskRating,
 )
 from app.models.job import JobRun, JobRunStatus
+from app.models.ledger import AccountClass, Book, Component, GLAccount, JournalEntry, LedgerLine, MemberTransaction
 from app.models.member import (
     AssignmentReason, Beneficiary, BeneficiaryNomination, ImportStatus, Member, MemberImport, MemberAssignment, MemberSalary, MemberServicePeriod, MemberStatus,
     MemberStatusChange,
@@ -29,4 +30,5 @@ __all__ = [
     "RiskRating", "BenefitCategory", "BenefitCategoryTerms", "BenefitDesign", "BillingFrequency", "CategoryStatus", "RateType", "SalaryBasis", "InvestmentOption", "InvestmentOptionStatus", "PricingMethod", "RegulatoryParameterVersion", "TaxBand", "TaxTable", "TaxTableKind", "FundPeriod", "Scheme", "SchemeOfficer", "SchemeStatus", "FundStatus", "FundTrustee", "FundType", "PeriodStatus", "UserFundAccess", "JobRun", "JobRunStatus", "NotificationChannel",
     "NotificationOutbox", "OutboxStatus", "PasswordResetToken", "User", "UserNotification", "UserRole",
     "UserRoleAssignment", "UserStatus", "AssignmentReason", "Member", "MemberAssignment", "MemberStatus", "MemberStatusChange", "Beneficiary", "BeneficiaryNomination", "MemberSalary", "MemberServicePeriod", "ImportStatus", "MemberImport",
+    "AccountClass", "Book", "Component", "GLAccount", "JournalEntry", "LedgerLine", "MemberTransaction",
 ]

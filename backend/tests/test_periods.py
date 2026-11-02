@@ -56,7 +56,7 @@ def test_close_opens_next_month(client, db, fund, finance):
     body = response.json()
     assert body["current"]["period"] == "2027-01-01"  # year rolls over
     assert [p["status"] for p in body["history"]] == ["open", "closed"]
-    assert all(c["status"] == "not_available" for c in body["checklist"])
+    assert {c["key"]: c["status"] for c in body["checklist"]}["ledger_balanced"] == "passed"  # empty ledger balances
     assert client.get(f"/api/v1/funds/{fund.id}", headers=auth_headers(finance)).json()["current_period"] == "2027-01-01"
 
 

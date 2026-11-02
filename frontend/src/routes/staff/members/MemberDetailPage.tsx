@@ -37,8 +37,9 @@ import { MEMBER_STATUS_LABELS, type KycStanding, type Member, type MemberStatus 
 import { formatDate } from "../../../utils/date";
 import { MemberBeneficiariesTab } from "./MemberBeneficiariesTab";
 import { MemberEmploymentTab } from "./MemberEmploymentTab";
+import { MemberTransactionsTab } from "./MemberTransactionsTab";
 
-const TABS = ["main", "member", "beneficiaries", "salary", "company", "kyc", "regulatory", "history"] as const;
+const TABS = ["main", "member", "beneficiaries", "salary", "company", "kyc", "regulatory", "transactions", "history"] as const;
 type MemberTab = (typeof TABS)[number];
 
 const STATUS_HELP: Record<MemberStatus, string> = {
@@ -444,6 +445,7 @@ export function MemberDetailPage() {
         <Tab value="company" label="Company info" />
         <Tab value="kyc" label="KYC" />
         <Tab value="regulatory" label="Regulatory Authority Data" />
+        <Tab value="transactions" label="Transactions" />
         <Tab value="history" label="History" />
       </Tabs>
       {tab === "main" && <MainInformation m={m} />}
@@ -453,6 +455,7 @@ export function MemberDetailPage() {
       {tab === "company" && <CompanyInfo m={m} />}
       {tab === "kyc" && <KycTab m={m} />}
       {tab === "regulatory" && <RegulatoryTab m={m} />}
+      {tab === "transactions" && <MemberTransactionsTab member={m} />}
       {tab === "history" && <History m={m} />}
       {statusOpen && <StatusDialog m={m} open onClose={() => setStatusOpen(false)} />}
       {moveOpen && <MoveDialog m={m} onClose={() => setMoveOpen(false)} />}

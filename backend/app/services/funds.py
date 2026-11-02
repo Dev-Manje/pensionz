@@ -17,7 +17,7 @@ from app.models.fund import BankAccountPurpose, Fund, FundBankAccount, FundStatu
 from app.models.identity import User, UserRole
 from app.models.reference import Bank, BankBranch
 from app.schemas.fund import FundIn
-from app.services import approvals, audit, fund_access
+from app.services import approvals, audit, fund_access, ledger
 
 KIND = "fund_setup"
 
@@ -245,6 +245,7 @@ def _apply(db: Session, request: ApprovalRequest, checker: User) -> None:
         # so its later changes can be made and approved without waiting on an admin.
         fund_access.grant(db, request.initiated_by_user_id, fund.id, checker.id)
         fund_access.grant(db, checker.id, fund.id, checker.id)
+        ledger.ensure_chart(db, fund.id)
         request.entity_id = str(fund.id)
         request.fund_id = fund.id
         db.flush()
