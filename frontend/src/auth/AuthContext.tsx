@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { getMe, login as loginRequest } from "../api/auth";
+import { getMe, login as loginRequest, submitSignInCode } from "../api/auth";
 import { ApiError, getAccessToken, onUnauthorized, setTokens } from "../api/client";
 import { queryClient } from "../queryClient";
-import type { Me, TokenPair } from "../api/types";
+import type { CodeChallenge, Me, SignInResult, TokenPair } from "../api/types";
 
 interface AuthContextValue {
   user: Me | null;
@@ -10,9 +10,13 @@ interface AuthContextValue {
   // Signed in, but the server couldn't be reached to load the account (offline, restarting).
   unreachable: boolean;
   retry: () => void;
-  login: (email: string, password: string) => Promise<void>;
-  // Start a session from tokens already issued (e.g. after a password reset).
-  signIn: (tokens: TokenPair) => Promise<void>;
+  // Signs in, or returns the challenge when a one-time code is needed (portal users).
+  login: (email: string, password: string) => Promise<CodeChallenge | null>;
+  // Finishes a sign-in with the emailed one-time code.
+  completeSignIn: (challenge: string, code: string) => Promise<void>;
+  // Start a session from a sign-in answer (e.g. after a password reset); returns
+  // the challenge instead when a one-time code is needed.
+  signIn: (result: SignInResult | TokenPair) => Promise<CodeChallenge | null>;
   logout: () => void;
 }
 
@@ -71,16 +75,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [attempt]);
 
-  async function login(email: string, password: string) {
-    setTokens(await loginRequest(email, password));
-    const me = await getMe();
-    setUser(me);
+  async function signIn(result: SignInResult | TokenPair): Promise<CodeChallenge | null> {
+    if ("code_required" in result && result.code_required) {
+      return { challenge: result.challenge ?? "", sentTo: result.code_sent_to ?? "your email" };
+    }
+    queryClient.clear();
+    setTokens({ access_token: result.access_token ?? "", refresh_token: result.refresh_token ?? "" });
+    setUser(await getMe());
+    return null;
   }
 
-  async function signIn(tokens: TokenPair) {
-    queryClient.clear();
-    setTokens(tokens);
-    setUser(await getMe());
+  async function login(email: string, password: string) {
+    return signIn(await loginRequest(email, password));
+  }
+
+  async function completeSignIn(challenge: string, code: string) {
+    await signIn(await submitSignInCode(challenge, code));
   }
 
   function logout() {
@@ -91,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, unreachable, retry: () => setAttempt((a) => a + 1), login, signIn, logout }}>
+    <AuthContext.Provider value={{ user, loading, unreachable, retry: () => setAttempt((a) => a + 1), login, completeSignIn, signIn, logout }}>
       {children}
     </AuthContext.Provider>
   );

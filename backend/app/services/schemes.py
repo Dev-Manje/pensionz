@@ -3,7 +3,14 @@
 The maker sends the whole scheme — details and the principal officers who act
 for it — as one snapshot (approval kind "scheme_setup", checker: scheme
 setup checker who administers the fund). Linking an officer gives them portal
-access to the scheme, which is why it is part of the approved snapshot."""
+access to the scheme, which is why it is part of the approved snapshot.
+
+Principal officers (FR-PRT-006): one officer may act for several employers in
+one or more funds, and an employer may have several officers. The maker links
+existing officers or names new ones (name, email, phone); on approval a new
+officer gets a principal-officer login and an invitation, while an email that
+already belongs to a principal officer just links that login."""
+import secrets
 import uuid
 from datetime import date
 
@@ -17,7 +24,7 @@ from app.models.identity import User, UserRole, UserStatus
 from app.models.kyc import ClientType, Party
 from app.models.scheme import BillingFrequency, Scheme, SchemeOfficer, SchemeStatus
 from app.schemas.scheme import SchemeIn
-from app.services import approvals, audit
+from app.services import approvals, audit, identity, notifications, passwords
 
 KIND = "scheme_setup"
 
@@ -39,6 +46,20 @@ def pending_request_id(db: Session, scheme_id: uuid.UUID) -> uuid.UUID | None:
 
 def _officer_row(user: User) -> dict:
     return {"user_id": str(user.id), "full_name": user.full_name or user.email, "email": user.email}
+
+
+def _existing_officer(db: Session, email: str) -> User | None:
+    """The login behind an email, if it may be linked; 400 if the email
+    belongs to someone who can't act as a principal officer."""
+    user = identity.find_by_email(db, email)
+    if user is None:
+        return None
+    if not user.has_role(UserRole.principal_officer):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST,
+                            f"{email} already has a login without the principal officer role — ask an administrator to add the role")
+    if user.status != UserStatus.active:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{user.full_name or user.email} isn't an active user")
+    return user
 
 
 def snapshot(scheme: Scheme) -> dict:
@@ -77,6 +98,17 @@ def _proposed(db: Session, data: SchemeIn) -> dict:
         if user.status != UserStatus.active:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{user.full_name or user.email} isn't an active user")
         officers.append(_officer_row(user))
+    linked = {o["email"] for o in officers}
+    for new in data.new_officers:
+        email = new.email.strip().lower()
+        if email in linked:
+            continue
+        linked.add(email)
+        existing = _existing_officer(db, email)
+        # An existing officer (perhaps acting for other employers or funds) is
+        # linked, not invited again.
+        officers.append(_officer_row(existing) if existing else
+                        {"user_id": None, "full_name": new.full_name, "email": email, "phone": new.phone, "invite": True})
     return audit._jsonable({
         **data.model_dump(include=set(SCHEME_FIELDS)),
         "principal_officers": sorted(officers, key=lambda o: o["email"]),
@@ -149,14 +181,41 @@ def _values(data: dict) -> dict:
     return values
 
 
-def _sync_officers(db: Session, scheme: Scheme, officers: list[dict]) -> None:
-    wanted = {uuid.UUID(o["user_id"]) for o in officers}
+def _officer_for(db: Session, row: dict, scheme: Scheme, fund: Fund, checker: User) -> tuple[uuid.UUID, bool]:
+    """(user id, invited now)."""
+    if row.get("user_id"):
+        return uuid.UUID(row["user_id"]), False
+    # Invited in this request — unless the email got a login in the meantime
+    # (e.g. invited for another employer approved first).
+    existing = _existing_officer(db, row["email"])
+    if existing is not None:
+        return existing.id, False
+    # Nobody knows this password: the officer sets theirs from the emailed link.
+    user = identity.create_user(db, row["email"], secrets.token_urlsafe(32), [UserRole.principal_officer],
+                                full_name=row["full_name"], phone=row.get("phone"))
+    token = passwords.issue_token(db, user, "invite", checker.id)
+    notifications.notify_invite(db, user, token, passwords.INVITE_DAYS,
+                                intro=f"You have been registered as a principal officer of {scheme.name} in {fund.name}, "
+                                      "to send contribution schedules and look after its members online.")
+    audit.record(db, checker.id, "user", user.id, "created",
+                 after={"email": user.email, "full_name": user.full_name, "roles": ["principal_officer"], "scheme": scheme.code})
+    return user.id, True
+
+
+def _sync_officers(db: Session, scheme: Scheme, officers: list[dict], checker: User) -> None:
+    fund = db.get(Fund, scheme.fund_id)
+    resolved = [_officer_for(db, row, scheme, fund, checker) for row in officers]
+    wanted = {user_id for user_id, _ in resolved}
+    invited_now = {user_id for user_id, invited in resolved if invited}
     for link in list(scheme.officers):
         if link.user_id not in wanted:
+            notifications.notify_portal_scheme_unlinked(db, link.user, scheme.name, fund.name)
             scheme.officers.remove(link)
     have = {link.user_id for link in scheme.officers}
     for user_id in wanted - have:
         scheme.officers.append(SchemeOfficer(user_id=user_id))
+        if user_id not in invited_now:  # the invitation already says which employer
+            notifications.notify_portal_scheme_linked(db, db.get(User, user_id), scheme.name, fund.name)
 
 
 def _apply(db: Session, request: ApprovalRequest, checker: User) -> None:
@@ -169,7 +228,7 @@ def _apply(db: Session, request: ApprovalRequest, checker: User) -> None:
         scheme = Scheme(fund_id=fund.id, **_values(data))
         db.add(scheme)
         db.flush()
-        _sync_officers(db, scheme, data["principal_officers"])
+        _sync_officers(db, scheme, data["principal_officers"], checker)
         request.entity_id = str(scheme.id)
         db.flush()
         db.refresh(scheme)
@@ -185,7 +244,7 @@ def _apply(db: Session, request: ApprovalRequest, checker: User) -> None:
         _check_code_free(db, scheme.fund_id, values["code"], scheme.id, ignore_request=request.id)
     for field, value in values.items():
         setattr(scheme, field, value)
-    _sync_officers(db, scheme, data["principal_officers"])
+    _sync_officers(db, scheme, data["principal_officers"], checker)
     db.flush()
     db.refresh(scheme)
     audit.record(db, checker.id, "scheme", scheme.id, "updated", before=before, after=snapshot(scheme), fund_id=scheme.fund_id)

@@ -24,7 +24,7 @@ http://localhost:8026.
 | rm@pensionz.dev | Pemphero Relationships | Relationship manager | Home (staff) |
 | auditor@pensionz.dev | Queen Auditor | Auditor (read-only) | Home (staff) |
 | trustee@pensionz.dev | Ruth Trustee | Trustee | (trustee portal — later phase) |
-| po@pensionz.dev | Steve Principal-Officer | Principal officer | `/po` portal |
+| po@pensionz.dev | Steve Principal-Officer | Principal officer — acts for employers in UMB01 and LSS01; after the password, enter the 6-digit code emailed to Mailpit (every sign-in) | `/po` portal |
 | member@pensionz.dev | Tiwonge Member | Member | `/member` portal |
 | individual@pensionz.dev | Upile Individual | Personal pension holder | `/member` portal |
 

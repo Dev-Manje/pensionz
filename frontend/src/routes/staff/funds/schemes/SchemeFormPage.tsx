@@ -2,8 +2,15 @@ import { useState, type FormEvent } from "react";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import Alert from "@mui/material/Alert";
 import Autocomplete from "@mui/material/Autocomplete";
+import Box from "@mui/material/Box";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
 import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import IconButton from "@mui/material/IconButton";
+import Paper from "@mui/material/Paper";
+import Tooltip from "@mui/material/Tooltip";
+import AddIcon from "@mui/icons-material/Add";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import Link from "@mui/material/Link";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
@@ -20,6 +27,7 @@ import {
   BILLING_FREQUENCY_LABELS,
   type BillingFrequency,
   type Fund,
+  type NewOfficer,
   type Scheme,
   type SchemeInput,
   type SchemeOfficer,
@@ -52,6 +60,7 @@ const EMPTY: SchemeInput = {
   contact_email: null,
   contact_phone: null,
   officer_ids: [],
+  new_officers: [],
   party_id: null,
 };
 
@@ -61,6 +70,7 @@ function toInput(s: Scheme): SchemeInput {
     if (key in s) (input as Record<string, unknown>)[key] = (s as unknown as Record<string, unknown>)[key];
   }
   input.officer_ids = s.officers.map((o) => o.user_id);
+  input.new_officers = [];
   return input;
 }
 
@@ -94,6 +104,13 @@ function SchemeForm({ fund, scheme }: { fund: Fund; scheme: Scheme | null }) {
   const officerOptions = candidates.data ?? [];
   // Keep already-linked officers selectable even if they no longer appear as candidates.
   const known = new Map<string, SchemeOfficer>([...(scheme?.officers ?? []), ...officerOptions].map((o) => [o.user_id, o]));
+
+  const setNewOfficer = (index: number, patch: Partial<NewOfficer>) =>
+    set("new_officers", form.new_officers.map((o, i) => (i === index ? { ...o, ...patch } : o)));
+  const officerLabel = (o: SchemeOfficer) => {
+    const others = o.other_scheme_count ?? 0;
+    return `${o.full_name} (${o.email})${others ? ` — also acts for ${others} other employer${others === 1 ? "" : "s"}` : ""}`;
+  };
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -220,7 +237,10 @@ function SchemeForm({ fund, scheme }: { fund: Fund; scheme: Scheme | null }) {
             loading={candidates.isLoading}
             value={form.officer_ids.map((id) => known.get(id)).filter((o): o is SchemeOfficer => !!o)}
             onChange={(_, chosen: SchemeOfficer[]) => set("officer_ids", chosen.map((o) => o.user_id))}
-            getOptionLabel={(o) => `${o.full_name} (${o.email})`}
+            getOptionLabel={officerLabel}
+            renderValue={(chosen, getItemProps) =>
+              chosen.map((o, index) => <Chip size="small" label={o.full_name} {...getItemProps({ index })} key={o.user_id} />)
+            }
             isOptionEqualToValue={(a, b) => a.user_id === b.user_id}
             renderInput={(params) => (
               <TextField
@@ -229,12 +249,61 @@ function SchemeForm({ fund, scheme }: { fund: Fund; scheme: Scheme | null }) {
                 helperText={
                   candidates.error
                     ? `Couldn't load principal officers: ${candidates.error.message}`
-                    : "Only users with the principal officer role are listed. An administrator creates their logins under Users."
+                    : "Officers who already have a login, from any fund — one officer may act for several employers. Not listed? Invite them below."
                 }
                 error={!!candidates.error}
               />
             )}
           />
+          <Stack spacing={1.5} sx={{ mt: 2 }}>
+            {form.new_officers.map((o, index) => (
+              <Paper key={index} variant="outlined" sx={{ p: 2 }}>
+                <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
+                  <Typography variant="subtitle2">New principal officer {form.new_officers.length > 1 ? index + 1 : ""}</Typography>
+                  <Tooltip title="Don't invite">
+                    <IconButton
+                      aria-label={`Don't invite ${o.full_name || "this officer"}`}
+                      onClick={() => set("new_officers", form.new_officers.filter((_, i) => i !== index))}
+                    >
+                      <DeleteOutlineIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
+                <FormGrid>
+                  <TextField label="Full name" value={o.full_name} onChange={(e) => setNewOfficer(index, { full_name: e.target.value })} required fullWidth />
+                  <TextField
+                    label="Email"
+                    type="email"
+                    value={o.email}
+                    onChange={(e) => setNewOfficer(index, { email: e.target.value })}
+                    required
+                    fullWidth
+                    helperText="The invitation and sign-in codes go here."
+                  />
+                  <TextField
+                    label="Mobile phone"
+                    value={o.phone ?? ""}
+                    onChange={(e) => setNewOfficer(index, { phone: e.target.value || null })}
+                    fullWidth
+                    helperText="Optional — for sign-in codes by SMS later."
+                  />
+                </FormGrid>
+              </Paper>
+            ))}
+            <Box>
+              <Button
+                startIcon={<AddIcon />}
+                onClick={() => set("new_officers", [...form.new_officers, { full_name: "", email: "", phone: null }])}
+                disabled={form.new_officers.length >= 10}
+              >
+                Invite a new principal officer
+              </Button>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                Once the checker approves, they get an email to choose a password. If the email already belongs to a principal officer,
+                that login is linked instead — no second account.
+              </Typography>
+            </Box>
+          </Stack>
         </FormSection>
 
         {error && <Alert severity="error">{error}</Alert>}

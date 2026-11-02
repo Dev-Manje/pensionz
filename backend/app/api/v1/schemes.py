@@ -10,7 +10,7 @@ from app.core.database import get_db
 from app.models.fund import Fund
 from app.models.identity import User, UserRole
 from app.models.member import Member
-from app.models.scheme import Scheme
+from app.models.scheme import Scheme, SchemeOfficer
 from app.schemas.approval import ApprovalOut
 from app.schemas.scheme import OfficerOut, SchemeIn, SchemeOut, SchemeSummaryOut
 from app.services import fund_access
@@ -39,8 +39,13 @@ def _get(db: Session, user: User, scheme_id: uuid.UUID) -> Scheme:
     return scheme
 
 
-def _officer(user: User) -> OfficerOut:
-    return OfficerOut(user_id=user.id, full_name=user.full_name or user.email, email=user.email)
+def _officer(db: Session, user: User, scheme_id: uuid.UUID | None = None) -> OfficerOut:
+    others = select(func.count(SchemeOfficer.id)).where(SchemeOfficer.user_id == user.id)
+    if scheme_id is not None:
+        others = others.where(SchemeOfficer.scheme_id != scheme_id)
+    return OfficerOut(user_id=user.id, full_name=user.full_name or user.email, email=user.email,
+                      awaiting_setup=user.last_login_at is None and user.password_changed_at is None,
+                      other_scheme_count=db.execute(others).scalar_one())
 
 
 @router.get("/funds/{fund_id}/schemes", response_model=list[SchemeSummaryOut])
@@ -59,8 +64,9 @@ def create_scheme(fund_id: uuid.UUID, payload: SchemeIn, db: Session = Depends(g
 
 @router.get("/schemes/officer-candidates", response_model=list[OfficerOut])
 def officer_candidates(db: Session = Depends(get_db), _: User = Depends(config_roles)) -> list[OfficerOut]:
-    """Principal officers who can be linked to an employer."""
-    return [_officer(u) for u in scheme_service.officer_candidates(db)]
+    """Principal officers who can be linked to an employer (one officer may act
+    for several employers, in any fund)."""
+    return [_officer(db, u) for u in scheme_service.officer_candidates(db)]
 
 
 @router.get("/schemes/{scheme_id}", response_model=SchemeOut)
@@ -72,7 +78,7 @@ def get_scheme(scheme_id: uuid.UUID, db: Session = Depends(get_db), user: User =
         fund_code=fund.code, fund_name=fund.name,
         **{f: getattr(s, f) for f in ("registration_number", "tpin", "join_date", "exit_date", "address_line1", "address_line2",
                                       "address_line3", "phone", "email", "contact_email", "contact_phone")},
-        officers=sorted((_officer(o.user) for o in s.officers), key=lambda o: o.full_name.lower()),
+        officers=sorted((_officer(db, o.user, s.id) for o in s.officers), key=lambda o: o.full_name.lower()),
         party_id=s.party_id, kyc=member_service.kyc_status(db, s.party_id),
         member_count=db.execute(select(func.count()).select_from(Member).where(Member.scheme_id == s.id)).scalar_one(),
         can_edit=user.has_role(UserRole.scheme_config_maker),

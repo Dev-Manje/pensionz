@@ -13,7 +13,7 @@ from app.core.config import settings
 from app.core.email import EmailNotConfigured, send_email
 from app.models.mixins import utcnow
 from app.models.notification import NotificationChannel, NotificationOutbox, OutboxStatus
-from app.services.notifications import PRIVATE_LINK_EVENTS
+from app.services.notifications import PRIVATE_BODY_EVENTS, PRIVATE_LINK_EVENTS
 
 logger = logging.getLogger("app.notifications")
 
@@ -84,6 +84,8 @@ def deliver_one(db: Session) -> bool:
         logger.info("Sent %s to %s", row.event, row.recipient_address)
     if row.event in PRIVATE_LINK_EVENTS and row.status != OutboxStatus.pending:
         row.link = None  # a password link lives only in the email itself
+    if row.event in PRIVATE_BODY_EVENTS and row.status != OutboxStatus.pending:
+        row.body = "(one-time code removed after sending)"
     db.commit()
     return True
 

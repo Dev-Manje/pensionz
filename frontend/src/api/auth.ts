@@ -1,11 +1,20 @@
 import { apiFetch } from "./client";
-import type { Me, TokenPair } from "./types";
+import type { Me, SignInResult, TokenPair } from "./types";
 
 export function login(email: string, password: string) {
-  return apiFetch<TokenPair>("/auth/login", {
+  return apiFetch<SignInResult>("/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
+}
+
+// Second sign-in step for portal users: the code from the email.
+export function submitSignInCode(challenge: string, code: string) {
+  return apiFetch<TokenPair>("/auth/sign-in-code", { method: "POST", body: JSON.stringify({ challenge, code }) });
+}
+
+export function resendSignInCode(challenge: string) {
+  return apiFetch<{ detail: string }>("/auth/sign-in-code/resend", { method: "POST", body: JSON.stringify({ challenge }) });
 }
 
 export function getMe() {
@@ -35,7 +44,8 @@ export function getResetLinkStatus(token: string) {
   return apiFetch<ResetLinkStatus>(`/auth/reset-password/status?token=${encodeURIComponent(token)}`);
 }
 
-// Sets the password from an emailed link and signs the user in.
+// Sets the password from an emailed link and signs the user in (portal users:
+// once they enter the code that is emailed next).
 export function resetPassword(token: string, new_password: string) {
-  return apiFetch<TokenPair>("/auth/reset-password", { method: "POST", body: JSON.stringify({ token, new_password }) });
+  return apiFetch<SignInResult>("/auth/reset-password", { method: "POST", body: JSON.stringify({ token, new_password }) });
 }

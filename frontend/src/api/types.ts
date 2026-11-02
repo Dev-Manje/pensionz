@@ -6,6 +6,21 @@ export interface TokenPair {
   token_type?: string;
 }
 
+// Sign-in answer: tokens, or (portal users, FR-PRT-006) a challenge to finish
+// with the one-time code just emailed to them.
+export interface SignInResult {
+  access_token: string | null;
+  refresh_token: string | null;
+  code_required: boolean;
+  challenge: string | null;
+  code_sent_to: string | null;
+}
+
+export interface CodeChallenge {
+  challenge: string;
+  sentTo: string;
+}
+
 export type UserRole =
   | "admin"
   | "scheme_config_maker"
@@ -307,6 +322,32 @@ export interface SchemeOfficer {
   user_id: string;
   full_name: string;
   email: string;
+  // Invited but hasn't chosen a password yet.
+  awaiting_setup?: boolean;
+  // Other employers (in any fund) this officer acts for.
+  other_scheme_count?: number;
+}
+
+// A principal officer to invite when the employer change is approved. An email
+// that already belongs to a principal officer links that login instead.
+export interface NewOfficer {
+  full_name: string;
+  email: string;
+  phone: string | null;
+}
+
+// An employer the signed-in principal officer acts for (any fund).
+export interface PortalScheme {
+  id: string;
+  code: string;
+  name: string;
+  status: SchemeStatus;
+  fund_id: string;
+  fund_code: string;
+  fund_name: string;
+  contribution_day: number;
+  billing_frequency: BillingFrequency;
+  member_count: number;
 }
 
 export interface SchemeSummary {
@@ -355,6 +396,7 @@ export interface SchemeInput extends SchemeDetails {
   billing_frequency: BillingFrequency;
   contact_name: string | null;
   officer_ids: string[];
+  new_officers: NewOfficer[];
   party_id: string | null;
 }
 

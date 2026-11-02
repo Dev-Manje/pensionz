@@ -44,6 +44,10 @@ Answered:
       confirm the money in the bank and a checker approves (posts Dr 1000 / Cr 2100 — cash to suspense, no receivable
       billing). Schedule ≠ money received → **hold until resolved** (allocate only when they agree). %-of-contribution
       fees follow the rule's **payer** (member → deducted from the member; employer → on top, to 2500/2400; fund → fee run).
+- [x] **Portal access & one-time codes** — 2026-11-02 (user): sign-in codes go by **email now, SMS later** (when a gateway
+      is chosen); portal users (no staff role) enter a code at **every sign-in**; principal officers are **invited from the
+      employer screen** (part of the employer approval). One officer may act for several employers in several funds — an
+      email that already belongs to a principal officer links that login, never a second account.
 
 Open — the default in *italics* is what we build to until answered (from REQUIREMENTS §10):
 - [ ] **Legacy system & extract** — PFS on Oracle XE identified 2026-11-01 (`docs/legacy/PFS-analysis.md`);
@@ -300,8 +304,14 @@ Open — the default in *italics* is what we build to until answered (from REQUI
 
 ## Phase 5 — Principal officer portal (FR-PRT-001, 005, 006)
 
-- [ ] Portal access: staff invite principal officers, OTP first login, officer ↔ scheme links
-      (one officer, many schemes; many officers per scheme). FR-PRT-006
+- [x] Portal access: staff invite principal officers, OTP first login, officer ↔ scheme links
+      (one officer, many schemes; many officers per scheme). FR-PRT-006 — done 2026-11-02, see `services/otp.py`,
+      `services/portal.py`, `api/v1/po.py`, `auth/SignInCodeStep.tsx`, `routes/po/PoHome.tsx`. Employer form "Invite a new
+      principal officer" (login + invitation on approval; existing officer's email → linked, told by bell/email); emailed
+      6-digit code at every portal sign-in and after accepting an invitation; `GET /po/schemes` (all employers, any fund).
+      pytest 19 new (`test_portal_access.py`), curl smoke incl. 401/403, screenshots 1440/820/390 viewed.
+      Follow-ups: SMS channel for codes (gateway open); code before money-affecting portal actions (service ready —
+      purpose = action — wire in with remittances); approval dialog diff table overflows at 390px (staff, pre-existing).
 - [ ] PO dashboard: schemes, current month remittance status, arrears, recent activity.
 - [ ] Organisation KYC from the portal (reuse Phase 2 forms) and change requests.
 - [ ] Remit contributions: upload/capture schedule, attach proof of payment, see validation errors per

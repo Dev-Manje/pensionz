@@ -436,3 +436,34 @@ receipt", number, issue date, amount + amount in words in kwacha/tambala, method
 month, note that members are credited on allocation). `GET /receipts/{id}/document` (staff with fund access; 409 when
 there's nothing to print; each print audited); `document_kind` on `ReceiptOut`; "Print receipt / acknowledgement" button
 on the receipt page. Not stored — generated on request.
+
+## Phase 5 — Principal officer portal (FR-PRT-001, 005, 006)
+
+### Portal access and one-time codes (FR-PRT-006, FR-SEC-004) — 2026-11-02
+
+Migration `d8e3a61c5b72_one_time_codes.py` (`one_time_code`: user, purpose, HMAC of the code, channel, expiry, attempts,
+used_at).
+
+- **One-time codes** (`services/otp.py`): portal users — any portal role and **no** staff role — enter a 6-digit code at
+  **every** sign-in (decided 2026-11-02). Settings `otp_minutes` (10), `otp_max_attempts` (5 wrong tries kill the code),
+  `otp_max_sends_per_15_minutes` (5 → 429). A new code voids older ones for the same purpose. Sent by email
+  (`auth.one_time_code`: generic subject, code only in the body, never in the bell; the worker replaces the body once
+  sent); SMS later. `purpose` is free text so money-affecting portal actions can reuse it.
+- **Sign-in flow:** `POST /auth/login` and `POST /auth/reset-password` return `SignInResult` — tokens, or
+  `{code_required, challenge, code_sent_to: "p•••@domain"}`; the challenge is a JWT of type `sign_in_challenge` lasting
+  `otp_minutes`, refused if issued before a password change. `POST /auth/sign-in-code {challenge, code}` → tokens (audit
+  `signed_in`; the password step audits `password_accepted`); `POST /auth/sign-in-code/resend {challenge}`. Staff sign-in
+  is unchanged. Frontend: `auth/SignInCodeStep.tsx` after the password on the sign-in page and after choosing a password
+  from an invitation/reset link.
+- **Inviting principal officers** (`services/schemes.py`): `SchemeIn.new_officers` (name, email, phone; ≤ 10) go into the
+  `scheme_setup` snapshot as `principal_officers` rows with `invite: true`. On approval each becomes a principal-officer
+  login with an invitation that names the employer and fund — unless the email by then belongs to a principal officer, who
+  is linked instead (also covers two pending invitations for one email). An email belonging to a non-officer login → 400.
+  Officers newly linked to another employer get `portal.scheme_linked`; removed ones `portal.scheme_unlinked`.
+  `OfficerOut` adds `awaiting_setup` and `other_scheme_count`; the employer's "Principal officers" tab shows Login
+  (Invitation sent / Active) and Other employers; the picker lists officers from every fund with "also acts for N".
+  The Approvals diff marks invited rows "new login — invited on approval".
+- **Portal scope** (`services/portal.py`): `officer_schemes(db, user)` (all linked employers, any fund) and
+  `require_officer_scheme(db, user, scheme_id)` (404 unless linked) — every per-employer portal endpoint goes through it.
+  `GET /po/schemes` (principal officer only) → employers with fund, due day, billing, member count. `/po` home lists them
+  grouped by fund.

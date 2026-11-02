@@ -10,10 +10,12 @@ import { LoadingState } from "../components/LoadingState";
 import { useAuth } from "./AuthContext";
 import { AuthLayout } from "./AuthLayout";
 import { NewPasswordFields, newPasswordProblem } from "./NewPasswordFields";
+import { SignInCodeStep } from "./SignInCodeStep";
+import type { CodeChallenge } from "../api/types";
 
 // /reset-password?token=… — from a "forgot password" email or a portal
 // invitation (&welcome=1). Checks the link first, then sets the password
-// and signs the user straight in.
+// and signs the user straight in (portal users after the emailed code).
 export function ResetPasswordPage() {
   const [params] = useSearchParams();
   const token = params.get("token") ?? "";
@@ -24,6 +26,7 @@ export function ResetPasswordPage() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [challenge, setChallenge] = useState<CodeChallenge | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -44,12 +47,27 @@ export function ResetPasswordPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await signIn(await resetPassword(token, password));
+      const needsCode = await signIn(await resetPassword(token, password));
+      if (needsCode) {
+        setChallenge(needsCode);
+        return;
+      }
       navigate("/", { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
       setSubmitting(false);
     }
+  }
+
+  if (challenge) {
+    // The password is saved; the link is used up, so "cancel" goes to sign-in.
+    return (
+      <SignInCodeStep
+        challenge={challenge}
+        onSignedIn={() => navigate("/", { replace: true })}
+        onCancel={() => navigate("/login", { replace: true })}
+      />
+    );
   }
 
   if (link === null) return <LoadingState />;

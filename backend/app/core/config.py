@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     max_failed_logins: int = 5
     lockout_minutes: int = 15
 
+    # One-time codes (FR-PRT-006, FR-SEC-004): portal users enter one at every
+    # sign-in, and later before money-affecting actions. Sent by email until an
+    # SMS gateway is chosen (decided 2026-11-02).
+    otp_minutes: int = 10
+    otp_max_attempts: int = 5
+    otp_max_sends_per_15_minutes: int = 5
+
     # Product branding for emails and messages (mirror of frontend/src/brand.ts).
     brand_name: str = "Pensionz"
     brand_color: str = "#0b5c6b"

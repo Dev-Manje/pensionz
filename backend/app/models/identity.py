@@ -102,3 +102,20 @@ class PasswordResetToken(UUIDPKMixin, CreatedAtMixin, Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=True)
+
+
+class OneTimeCode(UUIDPKMixin, CreatedAtMixin, Base):
+    """A 6-digit code sent to the user (email now, SMS later) to confirm a
+    sign-in or a money-affecting action. Only an HMAC of the code is stored;
+    it works once, for `otp_minutes`, and dies after `otp_max_attempts` wrong tries."""
+
+    __tablename__ = "one_time_code"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
+    # "sign_in", or an action key such as "remittance".
+    purpose: Mapped[str] = mapped_column(String(30), nullable=False)
+    code_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    channel: Mapped[str] = mapped_column(String(10), nullable=False, default="email")
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

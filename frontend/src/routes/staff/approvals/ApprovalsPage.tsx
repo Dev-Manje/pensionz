@@ -66,7 +66,15 @@ function describeRow(key: string, row: Row): string {
   const parts =
     key === "bank_accounts"
       ? [row.bank_name, row.branch_name, row.account_number, row.account_name, BANK_PURPOSE_LABELS[row.purpose as BankAccountPurpose], row.currency]
-      : [row.full_name, row.designation, row.email, row.phone, row.appointed_on ? `appointed ${formatDate(row.appointed_on as string)}` : null];
+      : [
+          row.full_name,
+          row.designation,
+          row.email,
+          row.phone,
+          row.appointed_on ? `appointed ${formatDate(row.appointed_on as string)}` : null,
+          // A principal officer who gets a new login (and invitation) on approval.
+          row.invite ? "new login — invited on approval" : null,
+        ];
   return parts.filter(Boolean).join(" · ");
 }
 

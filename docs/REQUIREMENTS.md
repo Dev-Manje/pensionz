@@ -400,7 +400,9 @@ User/Role/FundAccess · AuditEvent · Notification/Outbox · MigrationBatch.
     follow the rule's payer. Chart itself still to confirm with finance.*
 12. **Minors' trust accounts:** payout rules (instalments for school fees/maintenance, age of
     majority 18?), guardian verification.
-13. **Hosting, SSO** (Old Mutual Active Directory for staff?), MFA channel, data residency.
+13. **Hosting, SSO** (Old Mutual Active Directory for staff?), MFA channel, data residency. *Portal one-time codes
+    resolved 2026-11-02 (user): sent by **email** now, **SMS** once a gateway is chosen; portal users enter a code at
+    **every sign-in**. Staff MFA channel, SSO, hosting and data residency still open.*
 14. **Bulk upload template:** fields and format for members (with KYC + account code) — draft to
     be produced in planning for sign-off.
 15. **Branding:** Old Mutual brand guidelines/logo for portals and documents.

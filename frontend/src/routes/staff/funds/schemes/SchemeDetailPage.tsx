@@ -3,6 +3,7 @@ import Alert from "@mui/material/Alert";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
 import Button from "@mui/material/Button";
 import Link from "@mui/material/Link";
+import Chip from "@mui/material/Chip";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
@@ -85,14 +86,24 @@ function Officers({ scheme }: { scheme: Scheme }) {
             <TableRow>
               <TableCell>Name</TableCell>
               <TableCell>Email</TableCell>
+              <TableCell>Login</TableCell>
+              <TableCell>Other employers</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            <TableStateRow colSpan={2} loading={false} error={null} empty="No principal officers linked yet. Link them with “Edit employer”." count={scheme.officers.length} />
+            <TableStateRow colSpan={4} loading={false} error={null} empty="No principal officers linked yet. Link or invite them with “Edit employer”." count={scheme.officers.length} />
             {scheme.officers.map((o) => (
               <TableRow key={o.user_id}>
                 <TableCell sx={{ fontWeight: 500 }}>{o.full_name}</TableCell>
                 <TableCell>{o.email}</TableCell>
+                <TableCell>
+                  {o.awaiting_setup ? (
+                    <Chip size="small" color="warning" variant="outlined" label="Invitation sent" />
+                  ) : (
+                    <Chip size="small" color="success" variant="outlined" label="Active" />
+                  )}
+                </TableCell>
+                <TableCell>{o.other_scheme_count ? `Acts for ${o.other_scheme_count} more` : "—"}</TableCell>
               </TableRow>
             ))}
           </TableBody>

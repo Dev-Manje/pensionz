@@ -7,6 +7,16 @@ from app.models.scheme import BillingFrequency, SchemeStatus
 from app.schemas.fund import CODE_RE, _Clean
 
 
+class NewOfficerIn(_Clean):
+    """Someone to invite as a principal officer when the employer change is
+    approved. If the email already belongs to a principal officer (who may act
+    for other employers or funds), that login is linked instead."""
+
+    full_name: str = Field(min_length=2, max_length=200)
+    email: EmailStr
+    phone: str | None = Field(default=None, max_length=40)
+
+
 class SchemeIn(_Clean):
     """The whole scheme as the maker wants it to be, including which principal
     officers act for it; create and edit both go to one approval."""
@@ -29,6 +39,7 @@ class SchemeIn(_Clean):
     contact_email: EmailStr | None = None
     contact_phone: str | None = Field(default=None, max_length=40)
     officer_ids: list[uuid.UUID] = Field(default_factory=list, max_length=50)
+    new_officers: list[NewOfficerIn] = Field(default_factory=list, max_length=10)
     # Approved corporate KYC client for this employer (FR-ONB-105).
     party_id: uuid.UUID | None = None
 
@@ -53,6 +64,10 @@ class OfficerOut(BaseModel):
     user_id: uuid.UUID
     full_name: str
     email: str
+    # Invited but hasn't chosen a password yet.
+    awaiting_setup: bool = False
+    # Other employers (any fund) this officer acts for.
+    other_scheme_count: int = 0
 
 
 class SchemeSummaryOut(BaseModel):

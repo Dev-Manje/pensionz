@@ -17,6 +17,9 @@ from app.models.notification import NotificationChannel, NotificationOutbox, Use
 # Events whose link carries a secret (password links): kept out of the inbox
 # and wiped from the outbox once delivered.
 PRIVATE_LINK_EVENTS = frozenset({"auth.password_reset_link", "auth.invite"})
+# Events whose body carries a one-time code: never in the inbox, and the body
+# is wiped from the outbox once delivered.
+PRIVATE_BODY_EVENTS = frozenset({"auth.one_time_code"})
 
 
 def _email(db: Session, user: User, event: str, subject: str, body: str, *, link: str | None = None,
@@ -60,10 +63,31 @@ def notify_password_reset_link(db: Session, user: User, token: str, hours: int) 
            link=f"/reset-password?token={token}")
 
 
-def notify_invite(db: Session, user: User, token: str, days: int) -> None:
+def notify_invite(db: Session, user: User, token: str, days: int, *, intro: str | None = None) -> None:
     _email(db, user, "auth.invite", f"You have been given access to {settings.brand_name}",
-           f"An account has been created for you. Use the link below to choose your password; it works once, for {days} days.",
+           (intro or "An account has been created for you.")
+           + f" Use the link below to choose your password; it works once, for {days} days.",
            link=f"/reset-password?token={token}")
+
+
+def notify_one_time_code(db: Session, user: User, code: str, minutes: int, reason: str) -> None:
+    """Email only for now; SMS to the user's phone once a gateway is chosen."""
+    _email(db, user, "auth.one_time_code", f"Your {settings.brand_name} one-time code",
+           f"Your one-time code to {reason} is {code}. It works once, for {minutes} minutes.\n"
+           f"Never share it — {settings.brand_administrator} will never ask you for it. "
+           "If you didn't try to do this, change your password.")
+
+
+def notify_portal_scheme_linked(db: Session, user: User, scheme_name: str, fund_name: str) -> None:
+    _notify(db, user, "portal.scheme_linked", f"You can now act for {scheme_name}",
+            f"You have been linked to {scheme_name} in {fund_name} as a principal officer. "
+            "It is now listed under My schemes when you sign in.", link="/po")
+
+
+def notify_portal_scheme_unlinked(db: Session, user: User, scheme_name: str, fund_name: str) -> None:
+    _notify(db, user, "portal.scheme_unlinked", f"You no longer act for {scheme_name}",
+            f"You have been removed as a principal officer of {scheme_name} in {fund_name}. "
+            f"If this is a mistake, contact {settings.brand_administrator}.")
 
 
 def notify_password_changed(db: Session, user: User, how: str) -> None:

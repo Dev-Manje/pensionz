@@ -8,6 +8,9 @@
   from a 7-day link — staff never choose or see it.
 - Setting a password stamps `password_changed_at`, which signs out every
   other session (tokens issued before it are refused).
+- Portal users also enter a one-time code at every sign-in (`services/otp.py`):
+  the right password (or a new password from a link) only sends the code;
+  `complete_sign_in` runs once the code is confirmed.
 """
 import hashlib
 import re
@@ -22,7 +25,7 @@ from app.core.config import settings
 from app.core.security import hash_password, verify_password
 from app.models.identity import PasswordResetToken, User, UserStatus
 from app.models.mixins import utcnow
-from app.services import audit, identity, notifications
+from app.services import audit, identity, notifications, otp
 
 RESET_HOURS = 1
 STAFF_RESET_HOURS = 24
@@ -63,8 +66,26 @@ def authenticate(db: Session, email: str, password: str, ip_address: str | None 
         raise _bad(f"This account is not active. Contact {settings.brand_administrator}.", status.HTTP_403_FORBIDDEN)
     user.failed_login_count = 0
     user.locked_until = None
-    user.last_login_at = now
+    if otp.required_at_sign_in(user):
+        otp.send(db, user, otp.SIGN_IN, "sign in")
+        audit.record(db, user.id, "user", user.id, "password_accepted", ip_address=ip_address)
+    else:
+        _record_sign_in(db, user, ip_address)
+    db.commit()
+    return user
+
+
+def _record_sign_in(db: Session, user: User, ip_address: str | None) -> None:
+    user.last_login_at = utcnow()
     audit.record(db, user.id, "user", user.id, "signed_in", ip_address=ip_address)
+
+
+def complete_sign_in(db: Session, user: User, code: str, ip_address: str | None = None) -> User:
+    """Second step for portal users: the emailed code. Commits."""
+    if user.locked_until is not None and user.locked_until > utcnow():
+        raise _bad("Too many wrong passwords. Try again later or reset your password.", status.HTTP_423_LOCKED)
+    otp.verify(db, user, otp.SIGN_IN, code)
+    _record_sign_in(db, user, ip_address)
     db.commit()
     return user
 
@@ -144,6 +165,7 @@ def link_status(db: Session, token: str) -> dict:
 
 
 def reset_password(db: Session, token: str, new_password: str) -> User:
+    """Sets the password; signs staff in, sends portal users a sign-in code."""
     row = _valid_row(db, token)
     if row is None:
         raise _bad("This link has expired or was already used — ask for a new one")
@@ -151,8 +173,11 @@ def reset_password(db: Session, token: str, new_password: str) -> User:
     check_policy(new_password, user.email)
     _set_password(db, user, new_password)
     row.used_at = user.password_changed_at
-    user.last_login_at = utcnow()
     audit.record(db, None, "user", user.id, "password_set" if row.purpose == "invite" else "password_reset")
+    if otp.required_at_sign_in(user):
+        otp.send(db, user, otp.SIGN_IN, "sign in")
+    else:
+        user.last_login_at = utcnow()
     notifications.notify_password_changed(db, user, "set" if row.purpose == "invite" else "reset")
     db.commit()
     db.refresh(user)
