@@ -39,6 +39,12 @@ Answered:
       (`backend/.venv`, `backend/.env`, `frontend/.env`); only Postgres :5433, MinIO and Mailpit
       stay in Docker. Full Docker build revisited later (network too slow for image builds).
 
+- [x] **Receipts & allocation rules** — 2026-11-02 (user): receipts are two-stage — the principal officer's payment
+      notice gets an acknowledgement "received, pending confirmation"; the official receipt is issued only after staff
+      confirm the money in the bank and a checker approves (posts Dr 1000 / Cr 2100 — cash to suspense, no receivable
+      billing). Schedule ≠ money received → **hold until resolved** (allocate only when they agree). %-of-contribution
+      fees follow the rule's **payer** (member → deducted from the member; employer → on top, to 2500/2400; fund → fee run).
+
 Open — the default in *italics* is what we build to until answered (from REQUIREMENTS §10):
 - [ ] **Legacy system & extract** — PFS on Oracle XE identified 2026-11-01 (`docs/legacy/PFS-analysis.md`);
       still need DB access/export, volumes, history depth. Needed by Phase 11.
@@ -255,7 +261,11 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       `routes/staff/funds/FundLedgerTab.tsx`, `routes/staff/members/MemberTransactionsTab.tsx`: chart created per fund,
       immutable rows (DB triggers), open-month guard, exact reversals, GL 2000 tie-out live in the month-end checklist.
       pytest 12 new (168 total), vitest 33/33, tsc clean, API 200/403 smoke, screenshots 1440 + 390 viewed.
-- [ ] Receipts (bank, value date, reference, payer) + unallocated suspense. FR-CON-004
+- [x] Receipts (bank, value date, reference, payer) + unallocated suspense. FR-CON-004 — done 2026-11-02, see
+      `services/receipts.py`, `routes/staff/contributions/`: two-stage (principal officer payment notice → staff confirm
+      against the bank → contributions checker approves → Dr 1000 / Cr 2100 + receipt number), staff capture without a
+      notice, unidentified money + identify (reclass inside 2100), proof of payment upload, suspense ageing.
+      pytest 9 new, API smoke (self-approve 400, member admin 403, PO 403, future value date 400), screenshots viewed.
 - [ ] Contribution schedules: Excel/CSV template upload + manual capture, row validation, rates ≥
       minimum. FR-CON-001, FR-CON-003
 - [ ] Reconcile schedule ↔ receipt, over/under-payment rules, **Initial Allocation** posting net of
@@ -272,7 +282,8 @@ Open — the default in *italics* is what we build to until answered (from REQUI
 - [ ] PO dashboard: schemes, current month remittance status, arrears, recent activity.
 - [ ] Organisation KYC from the portal (reuse Phase 2 forms) and change requests.
 - [ ] Remit contributions: upload/capture schedule, attach proof of payment, see validation errors per
-      row, submit → staff allocation queue; history with allocation status.
+      row, submit → staff allocation queue; history with allocation status. Payment notice = `receipts.submit_notice`
+      (built in Phase 4; officer is told "received, pending confirmation"); links in notifications use `/po/remittances/<id>`.
 - [ ] Members: list (HR-level fields only), new member application + bulk upload, salary updates,
       exit notifications (start claim).
 - [ ] Statements of contributions / invoices / arrears download.

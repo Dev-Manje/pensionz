@@ -335,3 +335,24 @@ Migration `d2a7c4e9b318_ledger.py`; `models/ledger.py`, `services/ledger.py`, `a
 - Frontend: fund **Ledger** tab (`FundLedgerTab.tsx`: proposed-chart notice, tie-out banner, trial balance, journal with
   expandable lines, filter by account); member **Transactions** tab (`MemberTransactionsTab.tsx`: balance, per-component
   contributions/bonus/withdrawals, transactions with reversed markers).
+
+### Receipts and unallocated suspense (FR-CON-004) — 2026-11-02
+
+Migration `e3b8d5f1a274_receipts.py`; `models/contribution.py` (`contribution_receipt`), `services/receipts.py`,
+`api/v1/receipts.py`. Decided with the user: two stages, no posting before the money is confirmed.
+- **Payment notice** (`submit_notice`, principal officer of that scheme only; portal screen in Phase 5): status `notified`,
+  number `<FUND>-N000001`, notified amount, payment date/method, payer reference, month; contributions officers get an
+  in-app notice. Staff **confirm** it (`POST /receipts/{id}/confirm`: actual amount, value date, fund bank account, bank
+  reference) or **decline** it (`/decline`, reason ≥ 5 chars → officer notified).
+- **Staff capture** (`POST /funds/{id}/receipts`) for money without a notice; employer optional (= unidentified).
+- Both submit approval kind `receipt_confirm` (contributions checker, fund-scoped). Proposed values are shown on the receipt
+  while pending. Apply: receipt number `<FUND>-R000001`, posts **Dr 1000 / Cr 2100** (scheme analysis) dated the value date
+  if it is in the open month, else the first day of the open month (future value date 400; after the open month 409);
+  principal officers of the employer notified. Rejecting a notice's confirmation returns it to `notified`; a rejected staff
+  capture is `rejected`, a withdrawn one `cancelled`.
+- **Unidentified money**: `POST /receipts/{id}/identify` → kind `receipt_identify` → reclass Dr 2100 / Cr 2100 (scheme).
+- Proof of payment: `POST/GET /receipts/{id}/proof` (PDF/image ≤ 10 MB, MinIO `receipts/<id>`, views audited).
+- `GET /funds/{id}/receipts?status=&unidentified=&unallocated=&q=` with `unallocated_ageing` (0–30/31–60/61–90/90+ days
+  from value date) and `notices_waiting`. `allocated_amount` is maintained by allocation (next task).
+- Frontend: **Contributions** menu (`/contributions?fund=`), "Money received" tab (notice banner, suspense ageing tiles,
+  filters, list), record dialog; receipt page `/contributions/receipts/:id` (confirm / not received / identify, proof).
