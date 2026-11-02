@@ -791,3 +791,75 @@ export interface MemberDuplicate {
   status: MemberStatus;
   match: string;
 }
+
+// ---- Beneficiaries, salary and service (FR-MEM-008, 009)
+
+export interface BeneficiaryInput {
+  full_name: string;
+  relationship: string;
+  date_of_birth: string | null;
+  id_number: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  share_pct: string;
+  guardian_name: string | null;
+  guardian_relationship: string | null;
+  guardian_phone: string | null;
+  guardian_id_number: string | null;
+}
+
+export interface Beneficiary extends BeneficiaryInput {
+  relationship_label: string | null;
+  guardian_relationship_label: string | null;
+  is_minor: boolean;
+}
+
+export interface Nomination {
+  id: string;
+  version: number;
+  signed_date: string;
+  is_current: boolean;
+  note: string | null;
+  approved_by: string | null;
+  created_at: string;
+  beneficiaries: Beneficiary[];
+}
+
+export interface Nominations {
+  current: Nomination | null;
+  history: Nomination[];
+  pending_approval_id: string | null;
+  can_edit: boolean;
+}
+
+export interface Salary {
+  id: string;
+  effective_from: string;
+  basic_salary: string;
+  pensionable_salary: string;
+  note: string | null;
+  approved_by: string | null;
+  created_at: string;
+}
+
+export interface ServicePeriodInput {
+  start_date: string;
+  end_date: string | null;
+  part_time_factor: string;
+  note: string | null;
+}
+
+export interface ServicePeriod extends ServicePeriodInput {
+  years: string;
+}
+
+export interface EmploymentRecords {
+  salaries: Salary[];
+  current_salary: Salary | null;
+  service: ServicePeriod[];
+  pensionable_service_years: string;
+  salary_pending_approval_id: string | null;
+  service_pending_approval_id: string | null;
+  can_edit: boolean;
+}

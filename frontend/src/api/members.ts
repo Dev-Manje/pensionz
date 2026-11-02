@@ -1,5 +1,8 @@
 import { apiFetch } from "./client";
-import type { Approval, Member, MemberDuplicate, MemberPage, MemberStatus, MemberValues, PartyRef } from "./types";
+import type {
+  Approval, BeneficiaryInput, EmploymentRecords, Member, MemberDuplicate, MemberPage, MemberStatus, MemberValues, Nominations, PartyRef,
+  ServicePeriodInput,
+} from "./types";
 
 export interface MemberFilters {
   fund_id?: string | null;
@@ -32,3 +35,12 @@ export const proposeMemberUpdate = (id: string, values: MemberValues) =>
   apiFetch<Approval>(`/members/${id}`, { method: "PUT", body: JSON.stringify(values) });
 export const proposeStatusChange = (id: string, body: { to_status: MemberStatus; effective_date: string; reason: string }) =>
   apiFetch<Approval>(`/members/${id}/status`, { method: "POST", body: JSON.stringify(body) });
+
+export const getNominations = (id: string) => apiFetch<Nominations>(`/members/${id}/beneficiaries`);
+export const proposeNomination = (id: string, body: { signed_date: string; note: string | null; beneficiaries: BeneficiaryInput[] }) =>
+  apiFetch<Approval>(`/members/${id}/beneficiaries`, { method: "POST", body: JSON.stringify(body) });
+export const getEmployment = (id: string) => apiFetch<EmploymentRecords>(`/members/${id}/employment`);
+export const proposeSalary = (id: string, body: { effective_from: string; basic_salary: string; pensionable_salary: string | null; note: string | null }) =>
+  apiFetch<Approval>(`/members/${id}/salaries`, { method: "POST", body: JSON.stringify(body) });
+export const proposeService = (id: string, body: { periods: ServicePeriodInput[]; reason: string }) =>
+  apiFetch<Approval>(`/members/${id}/service`, { method: "PUT", body: JSON.stringify(body) });

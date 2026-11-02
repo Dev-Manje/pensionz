@@ -257,3 +257,21 @@ renderer (draft kept in localStorage), `/members/<id>` tabs Main information / M
 KYC / Regulatory Authority Data / History, "Correct details", "Change status" dialog. Employer form: KYC client
 picker; employer page shows KYC standing and member count. `StatusChip` takes an optional `label`.
 Seed: nine invented members across CTE01, NBL01, LSC01, MET01 (one deferred, one inactive).
+
+### Beneficiaries, salary and service history (FR-MEM-008, 009) — 2026-11-02
+
+Migration `b7d2f5a39c16`: `beneficiary_nomination` (member, version, signed date, `is_current`, note, who requested /
+approved) with `beneficiary` rows (name, relationship code, DOB, ID, contact, address, share %, guardian details);
+`member_salary` (from date, monthly basic and pensionable, unique per member + date); `member_service_period`
+(start, optional end, part-time factor, note). `services/member_records.py`, all checked by the member checker:
+- `beneficiary_nomination`: shares total exactly 100.00%, relationships from the Setup list, no name twice, under-18s
+  (on today's date) need guardian name, relationship and phone; approval makes it version n+1 and the old one history;
+- `member_salary`: from ≥ the earlier join date, ≤ a year ahead, active/inactive members only; same date corrects;
+  `salary_on(member, date)`;
+- `member_service`: the whole list replaces the old (audit keeps the before lines); no overlaps, only the latest open,
+  nothing in the future; `period_years` / `service_years(periods, as_of)` (known answers in tests).
+API: `GET|POST /members/{id}/beneficiaries`, `GET /members/{id}/employment`, `POST /members/{id}/salaries`,
+`PUT /members/{id}/service`. Beneficiary phone/email/address hidden and ID numbers masked outside `SENSITIVE_ROLES`.
+Frontend: member tabs "Beneficiaries" (current table with Minor chips, earlier versions, nomination dialog with live share
+total and guardian fields for minors) and "Salary & service" (now card, salary history + record dialog, service periods
++ editor, total pensionable service).

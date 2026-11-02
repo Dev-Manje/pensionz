@@ -1,5 +1,6 @@
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
@@ -202,4 +203,112 @@ class MemberOut(BaseModel):
     status_history: list[StatusChangeOut]
     assignments: list[AssignmentOut]
     pending_approval_id: uuid.UUID | None
+    can_edit: bool
+
+
+# ---- beneficiaries, salary, service (FR-MEM-008, 009)
+
+
+class BeneficiaryIn(_Clean):
+    full_name: str = Field(min_length=2, max_length=200)
+    relationship: str = Field(min_length=1, max_length=20)
+    date_of_birth: date | None = None
+    id_number: str | None = Field(default=None, max_length=40)
+    phone: str | None = Field(default=None, max_length=40)
+    email: EmailStr | None = None
+    address: str | None = Field(default=None, max_length=200)
+    share_pct: Decimal = Field(gt=0, le=100, decimal_places=2)
+    guardian_name: str | None = Field(default=None, max_length=200)
+    guardian_relationship: str | None = Field(default=None, max_length=20)
+    guardian_phone: str | None = Field(default=None, max_length=40)
+    guardian_id_number: str | None = Field(default=None, max_length=40)
+
+
+class NominationIn(_Clean):
+    signed_date: date
+    note: str | None = Field(default=None, max_length=1000)
+    beneficiaries: list[BeneficiaryIn] = Field(min_length=1, max_length=20)
+
+
+class BeneficiaryOut(BaseModel):
+    full_name: str
+    relationship: str
+    relationship_label: str | None
+    date_of_birth: date | None
+    is_minor: bool
+    id_number: str | None
+    phone: str | None
+    email: str | None
+    address: str | None
+    share_pct: Decimal
+    guardian_name: str | None
+    guardian_relationship: str | None
+    guardian_relationship_label: str | None
+    guardian_phone: str | None
+    guardian_id_number: str | None
+
+
+class NominationOut(BaseModel):
+    id: uuid.UUID
+    version: int
+    signed_date: date
+    is_current: bool
+    note: str | None
+    approved_by: str | None
+    created_at: datetime
+    beneficiaries: list[BeneficiaryOut]
+
+
+class NominationsOut(BaseModel):
+    current: NominationOut | None
+    history: list[NominationOut]
+    pending_approval_id: uuid.UUID | None
+    can_edit: bool
+
+
+class SalaryIn(_Clean):
+    effective_from: date
+    basic_salary: Decimal = Field(gt=0, max_digits=18, decimal_places=2)
+    # Defaults to the basic salary.
+    pensionable_salary: Decimal | None = Field(default=None, gt=0, max_digits=18, decimal_places=2)
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class SalaryOut(BaseModel):
+    id: uuid.UUID
+    effective_from: date
+    basic_salary: Decimal
+    pensionable_salary: Decimal
+    note: str | None
+    approved_by: str | None
+    created_at: datetime
+
+
+class ServicePeriodIn(_Clean):
+    start_date: date
+    end_date: date | None = None
+    part_time_factor: Decimal = Field(default=Decimal("1"), gt=0, le=1, decimal_places=4)
+    note: str | None = Field(default=None, max_length=500)
+
+
+class ServiceIn(_Clean):
+    periods: list[ServicePeriodIn] = Field(max_length=50)
+    reason: str = Field(min_length=3, max_length=1000)
+
+
+class ServicePeriodOut(BaseModel):
+    start_date: date
+    end_date: date | None
+    part_time_factor: Decimal
+    note: str | None
+    years: Decimal
+
+
+class EmploymentRecordsOut(BaseModel):
+    salaries: list[SalaryOut]
+    current_salary: SalaryOut | None
+    service: list[ServicePeriodOut]
+    pensionable_service_years: Decimal
+    salary_pending_approval_id: uuid.UUID | None
+    service_pending_approval_id: uuid.UUID | None
     can_edit: bool

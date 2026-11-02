@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { findDuplicates, getMember, kycPrefill, listMembers, listParties, type MemberFilters } from "../api/members";
+import { findDuplicates, getEmployment, getMember, getNominations, kycPrefill, listMembers, listParties, type MemberFilters } from "../api/members";
 
 export const memberKeys = {
   all: ["members"] as const,
@@ -37,4 +37,12 @@ export function useMemberProposal<A>(fn: (args: A) => Promise<unknown>) {
       queryClient.invalidateQueries({ queryKey: memberKeys.all });
     },
   });
+}
+
+export function useNominations(memberId: string) {
+  return useQuery({ queryKey: ["members", "beneficiaries", memberId], queryFn: () => getNominations(memberId) });
+}
+
+export function useEmployment(memberId: string) {
+  return useQuery({ queryKey: ["members", "employment", memberId], queryFn: () => getEmployment(memberId) });
 }

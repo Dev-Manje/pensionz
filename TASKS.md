@@ -215,8 +215,15 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       audited transitions. FR-MEM-005 — done 2026-11-02: `TRANSITIONS` (exited/deceased final), approval kind
       `member_status`, effective date + reason, exit date / date of death set, `member_status_change` history,
       `members.allows(status, activity)` for later phases (contributions only when active).
-- [ ] Beneficiaries (shares = 100%, guardians for minors, history). FR-MEM-008
-- [ ] Salary & service history. FR-MEM-009
+- [x] Beneficiaries (shares = 100%, guardians for minors, history). FR-MEM-008 — done 2026-11-02, see
+      `services/member_records.py`, migration `b7d2f5a39c16`: approval kind `beneficiary_nomination` (whole signed
+      form replaces the current one, versions kept), shares exactly 100.00%, under-18s need guardian name /
+      relationship / phone, not for exited or deceased members; contacts hidden and IDs masked outside
+      `SENSITIVE_ROLES`. Member tab "Beneficiaries" with earlier versions.
+- [x] Salary & service history. FR-MEM-009 — done 2026-11-02: `member_salary` versions (kind `member_salary`, same
+      date = correction, pensionable defaults to basic, active/inactive only, `salary_on`); `member_service_period`
+      (kind `member_service`, whole list, no overlaps, one open period, part-time factor, `period_years` = whole
+      months ÷ 12 + days ÷ 365.25 × factor). Member tab "Salary & service". pytest 13 new, smoke 12/12, screenshots viewed.
 - [ ] **Bulk member upload template** (design, download, validate, row errors, maker-checker
       import) + printable new-member application form. FR-MEM-006, FR-MEM-007
 - [ ] Category moves, employer transfers, data corrections via change requests. FR-MEM-010

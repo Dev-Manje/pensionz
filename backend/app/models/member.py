@@ -14,10 +14,11 @@ trust funds have no employers, so their members have no scheme or category."""
 import enum
 import uuid
 from datetime import date
+from decimal import Decimal
 
-from sqlalchemy import Boolean, Date, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Date, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 from app.models.mixins import CreatedAtMixin, TimestampMixin, UUIDPKMixin, str_enum
@@ -152,3 +153,75 @@ class MemberAssignment(UUIDPKMixin, CreatedAtMixin, Base):
     reason: Mapped[AssignmentReason] = mapped_column(str_enum(AssignmentReason, 30), nullable=False)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=True)
+
+
+class BeneficiaryNomination(UUIDPKMixin, CreatedAtMixin, Base):
+    """One signed nomination form (FR-MEM-008). A new approved nomination
+    replaces the current one; earlier versions are kept as history. At death
+    the trustees decide — nominations guide, they don't bind."""
+
+    __tablename__ = "beneficiary_nomination"
+    __table_args__ = (UniqueConstraint("member_id", "version", name="uq_beneficiary_nomination_version"),)
+
+    member_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("member.id"), nullable=False, index=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    signed_date: Mapped[date] = mapped_column(Date, nullable=False)
+    is_current: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    requested_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=True)
+    approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=True)
+    approval_request_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+
+    beneficiaries: Mapped[list["Beneficiary"]] = relationship(
+        back_populates="nomination", lazy="selectin", order_by="Beneficiary.position", cascade="all, delete-orphan"
+    )
+
+
+class Beneficiary(UUIDPKMixin, Base):
+    __tablename__ = "beneficiary"
+
+    nomination_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("beneficiary_nomination.id", ondelete="CASCADE"), nullable=False, index=True)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    full_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    relationship_code: Mapped[str] = mapped_column("relationship", String(20), nullable=False)
+    date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
+    id_number: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    address: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    share_pct: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+    # Required for beneficiaries under 18.
+    guardian_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    guardian_relationship: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    guardian_phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    guardian_id_number: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
+    nomination: Mapped["BeneficiaryNomination"] = relationship(back_populates="beneficiaries")
+
+
+class MemberSalary(UUIDPKMixin, CreatedAtMixin, Base):
+    """Monthly salary from a date (FR-MEM-009); the latest version on or before a date applies."""
+
+    __tablename__ = "member_salary"
+    __table_args__ = (UniqueConstraint("member_id", "effective_from", name="uq_member_salary_from"),)
+
+    member_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("member.id"), nullable=False, index=True)
+    effective_from: Mapped[date] = mapped_column(Date, nullable=False)
+    basic_salary: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    pensionable_salary: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=True)
+    approval_request_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+
+
+class MemberServicePeriod(UUIDPKMixin, CreatedAtMixin, Base):
+    """A period of pensionable service (FR-MEM-009, DB benefits). Gaps between
+    periods are breaks in service; part-time service counts at its factor."""
+
+    __tablename__ = "member_service_period"
+
+    member_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("member.id"), nullable=False, index=True)
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    part_time_factor: Mapped[Decimal] = mapped_column(Numeric(5, 4), nullable=False, default=Decimal("1"))
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)

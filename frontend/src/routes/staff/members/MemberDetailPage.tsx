@@ -33,8 +33,10 @@ import { useMember, useMemberProposal } from "../../../queries/members";
 import { proposeStatusChange } from "../../../api/members";
 import { MEMBER_STATUS_LABELS, type KycStanding, type Member, type MemberStatus } from "../../../api/types";
 import { formatDate } from "../../../utils/date";
+import { MemberBeneficiariesTab } from "./MemberBeneficiariesTab";
+import { MemberEmploymentTab } from "./MemberEmploymentTab";
 
-const TABS = ["main", "member", "company", "kyc", "regulatory", "history"] as const;
+const TABS = ["main", "member", "beneficiaries", "salary", "company", "kyc", "regulatory", "history"] as const;
 type MemberTab = (typeof TABS)[number];
 
 const STATUS_HELP: Record<MemberStatus, string> = {
@@ -371,6 +373,8 @@ export function MemberDetailPage() {
       <Tabs value={tab} onChange={(_, v: MemberTab) => setTab(v)} sx={{ mb: 2 }} variant="scrollable">
         <Tab value="main" label="Main information" />
         <Tab value="member" label="Member information" />
+        <Tab value="beneficiaries" label="Beneficiaries" />
+        <Tab value="salary" label="Salary & service" />
         <Tab value="company" label="Company info" />
         <Tab value="kyc" label="KYC" />
         <Tab value="regulatory" label="Regulatory Authority Data" />
@@ -378,6 +382,8 @@ export function MemberDetailPage() {
       </Tabs>
       {tab === "main" && <MainInformation m={m} />}
       {tab === "member" && <MemberInformation m={m} />}
+      {tab === "beneficiaries" && <MemberBeneficiariesTab member={m} />}
+      {tab === "salary" && <MemberEmploymentTab member={m} />}
       {tab === "company" && <CompanyInfo m={m} />}
       {tab === "kyc" && <KycTab m={m} />}
       {tab === "regulatory" && <RegulatoryTab m={m} />}

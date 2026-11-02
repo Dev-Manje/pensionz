@@ -9,7 +9,10 @@ from app.models.kyc import (
     ApplicationStatus, ClientType, DeclarationVersion, DocumentReview, KycApplication, KycDocument, Party, RiskRating,
 )
 from app.models.job import JobRun, JobRunStatus
-from app.models.member import AssignmentReason, Member, MemberAssignment, MemberStatus, MemberStatusChange
+from app.models.member import (
+    AssignmentReason, Beneficiary, BeneficiaryNomination, Member, MemberAssignment, MemberSalary, MemberServicePeriod, MemberStatus,
+    MemberStatusChange,
+)
 from app.models.period import FundPeriod, PeriodStatus
 from app.models.notification import NotificationChannel, NotificationOutbox, OutboxStatus, UserNotification
 from app.models.reference import (
@@ -25,5 +28,5 @@ __all__ = [
     "TransactionEffect", "TransactionType", "Village", "FeeBasis", "FeeFrequency", "FeePayer", "FeeRule", "FeeType", "ApplicationStatus", "ClientType", "DeclarationVersion", "DocumentReview", "KycApplication", "KycDocument", "Party",
     "RiskRating", "BenefitCategory", "BenefitCategoryTerms", "BenefitDesign", "BillingFrequency", "CategoryStatus", "RateType", "SalaryBasis", "InvestmentOption", "InvestmentOptionStatus", "PricingMethod", "RegulatoryParameterVersion", "TaxBand", "TaxTable", "TaxTableKind", "FundPeriod", "Scheme", "SchemeOfficer", "SchemeStatus", "FundStatus", "FundTrustee", "FundType", "PeriodStatus", "UserFundAccess", "JobRun", "JobRunStatus", "NotificationChannel",
     "NotificationOutbox", "OutboxStatus", "PasswordResetToken", "User", "UserNotification", "UserRole",
-    "UserRoleAssignment", "UserStatus", "AssignmentReason", "Member", "MemberAssignment", "MemberStatus", "MemberStatusChange",
+    "UserRoleAssignment", "UserStatus", "AssignmentReason", "Member", "MemberAssignment", "MemberStatus", "MemberStatusChange", "Beneficiary", "BeneficiaryNomination", "MemberSalary", "MemberServicePeriod",
 ]
