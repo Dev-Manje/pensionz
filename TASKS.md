@@ -312,6 +312,28 @@ Open — the default in *italics* is what we build to until answered (from REQUI
 - [ ] Statements of contributions / invoices / arrears download.
 - [ ] Notifications to POs: schedule due, received/rejected, arrears. FR-NOT-003
 
+## UAT checkpoint — Phases 0–5 (user acceptance testing)
+
+**Gate:** Phase 6 starts only after the user confirms in writing that UAT has passed (decided 2026-11-02).
+`pz-task` must not pick a Phase 6 item while the sign-off below is unticked.
+
+- [ ] UAT environment: clean database rebuilt from migrations, start/stop script, one test login per role
+      (`TEST_USERS.md`), Mailpit open for emails, reachable from the testers' machines.
+- [ ] UAT data set: invented but realistic funds (umbrella + stand-alone), employers, categories and rates, fee rules,
+      regulatory figures, members with salaries and beneficiaries, principal officers linked to schemes — no real data
+      from the source documents. Re-runnable seed script.
+- [ ] UAT scripts (`docs/uat/`): step-by-step scenarios with expected results, one per area —
+      sign-in & users (roles, lockout, password reset, fund access); fund setup & processing months; employers,
+      categories, fees, regulatory parameters; KYC onboarding & compliance review; members (create, edit, status changes,
+      beneficiaries, salary, moves, duplicates, bulk upload); receipts (PO notice → confirm → receipt, unidentified money);
+      schedules (template, upload, errors); allocation & reversal (books tie out); arrears; PDFs; principal officer portal
+      end to end; maker-checker and "can't approve own"; access limits (other fund / other employer → no access); phone
+      and desktop.
+- [ ] UAT defect log (`docs/uat/defects.md`): ID, scenario, steps, expected vs actual, severity, status.
+- [ ] UAT session(s) run with the user; every scenario marked pass / fail / not tested.
+- [ ] Fix UAT defects (each fix verified with `pz-verify` and re-tested in its scenario).
+- [ ] **UAT sign-off from the user** — only then start Phase 6.
+
 ## Phase 6 — Bonus / earnings (FR-EAR)
 
 - [ ] Bonus declarations per fund (period, rate, interim/final) with approval. FR-EAR-001

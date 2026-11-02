@@ -14,6 +14,8 @@ Work it like this:
    (AskUserQuestion) before building anything.
 2. **Pick the task.** The user's choice if they named one; otherwise the first unticked item
    in the lowest-numbered phase. State which one you're taking and the FR IDs it covers.
+   **Gates:** a checkpoint section (e.g. "UAT checkpoint" before Phase 6) counts as part of the order; never start a
+   phase that sits behind an unticked sign-off item — finish the checkpoint or ask the user.
 3. **Load the matching skill(s)** before writing code:
    - pension rules, benefits, unitisation, DB formulas, Malawi Pension Act → `pz-pension-domain`
    - fund/scheme/category/portfolio/fee setup → `pz-scheme-config` + `pz-pension-domain`
