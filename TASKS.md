@@ -348,7 +348,15 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       Employer portal"; decision emails link to `/po/requests/<id>`. No ID, bank, contact or balance fields in the
       portal. pytest 7 new, live smoke 13/13, screenshots 1440/390 viewed (import page covered by pytest only).
       Follow-up (Phase 8): an approved exit notice starts the withdrawal / retirement / death claim (`_exit_reason`).
-- [ ] Statements of contributions / invoices / arrears download.
+- [x] Statements of contributions / invoices / arrears download. FR-PRT-001 — done 2026-11-03, see
+      `services/io/employer_statements.py`, `GET /po/schemes/{id}/statements/{contributions|invoice|arrears}`,
+      `routes/po/PoStatements.tsx` (tab "Statements"): A4 PDFs on the fund letterhead — statement of contributions for up
+      to 24 months (per month: schedules, credited, paid incl. fees from the posted allocation; per-member credited totals),
+      contribution invoice for a month (expected per member from salary × rates, employer-paid % fees in force at month
+      end, due date, collection account, payment reference `<employer>-<YYYYMM>`; members without a salary listed as left
+      out; "not a tax invoice"), arrears statement (overdue months, ageing, interest if a rate is set; months not due yet as
+      a note). Downloads audit-logged. pytest 4 new (figures read from the PDFs), live PDFs for CTE01 read and checked,
+      screenshots 1440/390 viewed. Follow-up: staff copies of the same documents on the employer screen.
 - [ ] Notifications to POs: schedule due, received/rejected, arrears. FR-NOT-003
 
 ## UAT checkpoint — Phases 0–5 (user acceptance testing)

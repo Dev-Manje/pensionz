@@ -119,3 +119,10 @@ export function uploadMemberList(schemeId: string, file: File) {
 export const getPortalImport = (id: string) => apiFetch<MemberImport>(`/po/member-imports/${id}`);
 export const downloadImportErrors = (id: string) => downloadFile(`/po/member-imports/${id}/errors`, "member-upload-errors.xlsx");
 export const submitPortalImport = (id: string) => apiFetch<PortalRequest>(`/po/member-imports/${id}/submit`, { method: "POST" });
+
+// ---- statements (PDF)
+
+export const openInvoice = (schemeId: string, month: string) => openFile(`/po/schemes/${schemeId}/statements/invoice?month=${month}`);
+export const openContributionStatement = (schemeId: string, from: string, to: string) =>
+  openFile(`/po/schemes/${schemeId}/statements/contributions?from_month=${from}&to_month=${to}`);
+export const openArrearsStatement = (schemeId: string) => openFile(`/po/schemes/${schemeId}/statements/arrears`);

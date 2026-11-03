@@ -533,3 +533,17 @@ used_at).
   Employer portal (principal officer)" for the checker.
 - `GET /po/schemes/{id}/requests` / `GET /po/requests/{id}`: portal requests for the employer (last year) with status,
   checker's comment and the member. `notify_approval_decided` links portal-only makers to `/po/requests/<id>`.
+
+### Employer statements (FR-PRT-001) — 2026-11-03
+
+`services/io/employer_statements.py` (reportlab, the receipt documents' letterhead and styles), served to principal
+officers by `GET /po/schemes/{id}/statements/...` (audited `statement_downloaded`):
+- `contributions?from_month&to_month` (≤ 24 months, no future months): sent (ready/allocated) schedules per month, the
+  amount credited, the amount paid = posted allocation amount (schedule + employer-paid fees); per-member credited totals
+  from allocated schedules.
+- `invoice?month`: `schedules.expected_members` × `expected_for` (salary on record × category rates; members without a
+  salary are listed as left out), employer-paid `pct_contributions` fee rules in force at month end, due date
+  (`arrears.due_date`), first active collections/general bank account, reference `<employer code>-<YYYYMM>`. A statement
+  of the amount due — no VAT; not a tax invoice.
+- `arrears`: `arrears.scheme_arrears` — overdue months only in the table (total = `total_arrears`), months not due yet as
+  notes, ageing of the overdue amount, interest when `late_payment_interest_pct` is set.
