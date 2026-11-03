@@ -3,6 +3,7 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Divider from "@mui/material/Divider";
+import Link from "@mui/material/Link";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -60,7 +61,11 @@ function Remittance({ scheme }: { scheme: DashboardScheme }) {
       </Typography>
       {c.schedule_reference && (
         <Typography variant="body2">
-          Schedule {c.schedule_reference}: {c.member_lines} member{c.member_lines === 1 ? "" : "s"},{" "}
+          Schedule{" "}
+          <Link component={RouterLink} to={`/po/schedules/${c.schedule_id}`} underline="hover">
+            {c.schedule_reference}
+          </Link>
+          : {c.member_lines} member{c.member_lines === 1 ? "" : "s"},{" "}
           <Box component="span" sx={money}>
             {formatMoney(c.schedule_total)}
           </Box>
@@ -173,7 +178,13 @@ function Activity({ items, many }: { items: PortalActivity[]; many: boolean }) {
             <Box component="li" key={`${a.kind}-${a.at}-${i}`} sx={{ py: 1.25 }}>
               <Stack direction={{ xs: "column", sm: "row" }} sx={{ justifyContent: "space-between", gap: 0.5 }}>
                 <Typography variant="body2" sx={{ fontWeight: 600, color: a.kind === "notice_rejected" || a.kind === "allocation_reversed" ? "error.main" : undefined }}>
-                  {a.title}
+                  {a.link ? (
+                    <Link component={RouterLink} to={a.link} underline="hover" color="inherit">
+                      {a.title}
+                    </Link>
+                  ) : (
+                    a.title
+                  )}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
                   {formatDateTime(a.at)}

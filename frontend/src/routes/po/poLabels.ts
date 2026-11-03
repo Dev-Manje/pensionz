@@ -45,3 +45,30 @@ export const EXPIRY_TEXT: Record<ExpiryState, { label: string; tone: StatusTone 
   expired: { label: "Expired", tone: "error" },
   overdue: { label: "Overdue", tone: "error" },
 };
+
+// A schedule's status in the officer's words.
+export const SCHEDULE_TEXT: Record<"draft" | "ready" | "allocated" | "cancelled", { label: string; tone: StatusTone }> = {
+  draft: { label: "Not sent yet", tone: "warning" },
+  ready: { label: "Sent — being processed", tone: "info" },
+  allocated: { label: "Members credited", tone: "success" },
+  cancelled: { label: "Cancelled", tone: "default" },
+};
+
+// A payment notice / receipt in the officer's words.
+export const PAYMENT_TEXT: Record<"notified" | "pending_approval" | "confirmed" | "rejected" | "cancelled", { label: string; tone: StatusTone }> = {
+  notified: { label: "Received — pending confirmation", tone: "info" },
+  pending_approval: { label: "Received — pending confirmation", tone: "info" },
+  confirmed: { label: "Payment confirmed", tone: "success" },
+  rejected: { label: "Not confirmed", tone: "error" },
+  cancelled: { label: "Cancelled", tone: "default" },
+};
+
+// The months an officer may send a schedule for: this month back to a year ago (newest first).
+export function recentMonths(today: Date, count = 13): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`);
+  }
+  return out;
+}

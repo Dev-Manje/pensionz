@@ -2,8 +2,9 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from app.models.contribution import PaymentMethod, ReceiptStatus, ScheduleStatus
 from app.models.kyc import ApplicationStatus
 from app.models.scheme import BillingFrequency, SchemeStatus
 
@@ -62,6 +63,8 @@ class ActivityOut(BaseModel):
     kind: str
     title: str
     detail: str | None
+    # Where the officer opens it in the portal.
+    link: str | None = None
 
 
 class PoDashboardOut(BaseModel):
@@ -118,3 +121,88 @@ class OrganisationOut(BaseModel):
     documents: list[PortalDocumentOut]
     in_progress: PortalKycApplicationOut | None
     history: list[PortalKycApplicationOut]
+
+
+# ---- remittances (FR-PRT-001)
+
+
+class RemittanceScheduleOut(BaseModel):
+    id: uuid.UUID
+    reference: str
+    month: date
+    supplementary: bool
+    status: ScheduleStatus
+    total: Decimal
+    line_count: int
+    error_count: int
+    submitted_at: datetime | None
+    # When the contributions were credited to members (allocation posted).
+    credited_at: datetime | None
+    # Started in the portal (otherwise prepared by the administrator — read-only here).
+    from_portal: bool
+    editable: bool
+
+
+class PaymentOut(BaseModel):
+    id: uuid.UUID
+    notice_number: str | None
+    receipt_number: str | None
+    status: ReceiptStatus
+    month: date | None
+    notified_amount: Decimal | None
+    amount: Decimal | None
+    payment_date: date
+    value_date: date | None
+    payment_method: PaymentMethod
+    payer_reference: str | None
+    rejection_reason: str | None
+    has_proof: bool
+    created_at: datetime
+
+
+class RemittanceMonthOut(BaseModel):
+    # None: payments that didn't say which month they were for.
+    month: date | None
+    stage: str
+    schedules: list[RemittanceScheduleOut]
+    payments: list[PaymentOut]
+    schedule_total: Decimal
+    # Confirmed by the administrator.
+    paid: Decimal
+    # Notified, not confirmed yet.
+    noted: Decimal
+
+
+class PaymentDetailOut(PaymentOut):
+    scheme_id: uuid.UUID
+    scheme_name: str
+    notes: str | None
+    proof_filename: str | None
+    confirmed_at: datetime | None
+    can_add_proof: bool
+    # "receipt" | "acknowledgement" | None — the PDF the officer can download.
+    document_kind: str | None
+    schedules: list[RemittanceScheduleOut]
+
+
+class StartScheduleIn(BaseModel):
+    contribution_month: date
+    supplementary: bool = False
+
+
+class CodeIn(BaseModel):
+    code: str = Field(..., pattern=r"^\s*\d{6}\s*$")
+
+
+class CodeSentOut(BaseModel):
+    sent_to: str
+
+
+class NoticeIn(BaseModel):
+    amount: Decimal = Field(..., gt=0, max_digits=18, decimal_places=2)
+    payment_date: date
+    payment_method: PaymentMethod
+    payer_reference: str | None = Field(None, max_length=80)
+    contribution_month: date | None = None
+    notes: str | None = Field(None, max_length=2000)
+    code: str = Field(..., pattern=r"^\s*\d{6}\s*$")

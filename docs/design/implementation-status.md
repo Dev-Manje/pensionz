@@ -502,3 +502,21 @@ used_at).
   due (due soon = within 60 days), in-progress application and history.
 - Frontend: `/po` routes (`PoPortal.tsx`) — dashboard, `/po/schemes/<id>` employer page (tabs, employer switcher for
   officers of several employers), `/po/kyc/<id>`.
+
+### Remitting contributions from the portal (FR-PRT-001) — 2026-11-03
+
+- `services/remittances.py` + `api/v1/po_remittances.py` (role principal officer; every schedule/receipt checked
+  against the officer's employer links — other employers 404, staff 403).
+- Schedules: `POST /po/schemes/{id}/schedules` (draft prefilled at expected amounts, source `portal`), template download,
+  upload (a portal draft keeps source `portal`), lines add/edit/remove, fill-expected, cancel. The officer edits only
+  portal drafts; drafts staff started stay read-only in the portal.
+- One-time code before money actions: `POST /po/remit-code` emails a code (purpose `remit`); `submit` and
+  `payment-notices` take `code`. The request is checked first (row errors, amount, dates) so a refused request doesn't
+  use the code up; a used code can't be reused.
+- Sending a schedule → status ready (the staff allocation queue, unchanged) + bell to contributions officers with
+  access to the fund (`schedule.portal_submitted`).
+- Payment notices → `receipts.submit_notice`; proof of payment while notified; `GET /po/remittances/{id}` with the
+  acknowledgement / receipt PDF (`receipt_document`), the proof file and the month's schedules.
+- `GET /po/schemes/{id}/remittances`: months newest first (last 24 + the month now due + payments without a month),
+  stage as on the dashboard, `schedule_total` = sent schedules only, `paid` (confirmed), `noted` (pending).
+- Dashboard activity items carry a portal `link`; the remittance card links to the month's schedule.

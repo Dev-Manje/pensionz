@@ -12,11 +12,13 @@ import { LoadingState } from "../../components/LoadingState";
 import { useUrlTab } from "../../hooks/useUrlState";
 import { useMySchemes } from "../../queries/po";
 import { PoOrganisation } from "./PoOrganisation";
+import { PoRemittances } from "./PoRemittances";
 
-export const SCHEME_TABS = ["organisation"] as const;
+export const SCHEME_TABS = ["remittances", "organisation"] as const;
 export type SchemeTab = (typeof SCHEME_TABS)[number];
 
 const TAB_LABELS: Record<SchemeTab, string> = {
+  remittances: "Remittances",
   organisation: "Organisation & KYC",
 };
 
@@ -75,6 +77,7 @@ export function PoSchemePage() {
           <Tab key={t} value={t} label={TAB_LABELS[t]} />
         ))}
       </Tabs>
+      {tab === "remittances" && <PoRemittances schemeId={scheme.id} />}
       {tab === "organisation" && <PoOrganisation schemeId={scheme.id} />}
     </Stack>
   );

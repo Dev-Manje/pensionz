@@ -346,7 +346,10 @@ def upload(db: Session, user: User, schedule: ContributionSchedule, filename: st
         _set(line, LineValues(raw.get("account_code"), raw.get("employee_no"), raw.get("member_name"), values["pensionable_salary"],
                               values["employee"] or ZERO, values["employer"] or ZERO, values["voluntary"] or ZERO, values["severance"] or ZERO))
         schedule.lines.append(line)
-    schedule.source, schedule.filename = ScheduleSource.upload, filename[:200]
+    # A portal draft stays a portal draft (the employer keeps editing it); staff drafts become uploads.
+    if schedule.source != ScheduleSource.portal:
+        schedule.source = ScheduleSource.upload
+    schedule.filename = filename[:200]
     recheck(db, schedule)
     # Unreadable amounts are reported on top of the line checks.
     for line in schedule.lines:

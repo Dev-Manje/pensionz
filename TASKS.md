@@ -326,9 +326,17 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       officer of the employer can finish it); compliance sees "Changed since the last approval"; the employer's first
       approval links it to the client; risk rating hidden from applicants; KYC form lists readable by portal users.
       pytest 4 new, live smoke 22/22 (MinIO), screenshots 1440/390 viewed.
-- [ ] Remit contributions: upload/capture schedule, attach proof of payment, see validation errors per
+- [x] Remit contributions: upload/capture schedule, attach proof of payment, see validation errors per
       row, submit → staff allocation queue; history with allocation status. Payment notice = `receipts.submit_notice`
       (built in Phase 4; officer is told "received, pending confirmation"); links in notifications use `/po/remittances/<id>`.
+      — done 2026-11-03, see `services/remittances.py`, `api/v1/po_remittances.py`, `routes/po/PoRemittances.tsx`,
+      `PoSchedulePage.tsx`, `PoPaymentPage.tsx`, `RemitCodeDialog.tsx`: employer tab "Remittances" month by month
+      (schedules + payments, stage, what's still to pay); portal draft prefilled with active members at expected amounts,
+      spreadsheet download/upload (stays a portal draft), add/edit/remove rows, each row's errors and warnings (shared
+      `ScheduleParts.tsx` with the staff screen); staff-prepared drafts read-only; sending a schedule or a payment notice
+      needs an emailed one-time code (purpose `remit`, checked after the request is valid); sent schedule → ready in the
+      contributions queue + bell to contributions officers; notice → proof upload, acknowledgement/receipt PDF; dashboard
+      cards and activity link to these pages. pytest 7 new, vitest 1, live smoke 13/13, screenshots 1440/390 viewed.
 - [ ] Members: list (HR-level fields only), new member application + bulk upload, salary updates,
       exit notifications (start claim).
 - [ ] Statements of contributions / invoices / arrears download.

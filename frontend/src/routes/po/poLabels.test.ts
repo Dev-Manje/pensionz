@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dueText, isLate } from "./poLabels";
+import { dueText, isLate, recentMonths } from "./poLabels";
 
 describe("dueText", () => {
   it("counts days to the due date and past it", () => {
@@ -17,5 +17,14 @@ describe("isLate", () => {
     expect(isLate("awaiting_allocation", -3)).toBe(true);
     expect(isLate("allocated", -3)).toBe(false);
     expect(isLate("draft", 0)).toBe(false);
+  });
+});
+
+describe("recentMonths", () => {
+  it("lists this month back a year, across the year end", () => {
+    const months = recentMonths(new Date(2026, 0, 15));
+    expect(months).toHaveLength(13);
+    expect(months.slice(0, 3)).toEqual(["2026-01-01", "2025-12-01", "2025-11-01"]);
+    expect(months[12]).toBe("2025-01-01");
   });
 });

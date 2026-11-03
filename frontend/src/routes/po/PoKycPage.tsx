@@ -34,7 +34,7 @@ export function PoKycPage() {
 
   function submitted() {
     queryClient.invalidateQueries({ queryKey: poKeys.all });
-    navigate(scheme ? schemePath(scheme.id) : "/po");
+    navigate(scheme ? schemePath(scheme.id, "organisation") : "/po");
   }
 
   return (
@@ -44,7 +44,7 @@ export function PoKycPage() {
           My schemes
         </Link>
         {scheme && (
-          <Link component={RouterLink} to={schemePath(scheme.id)} underline="hover" color="inherit">
+          <Link component={RouterLink} to={schemePath(scheme.id, "organisation")} underline="hover" color="inherit">
             {scheme.name}
           </Link>
         )}

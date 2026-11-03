@@ -387,6 +387,7 @@ export interface PortalActivity {
   kind: "notice_sent" | "payment_confirmed" | "notice_rejected" | "schedule_sent" | "allocated" | "allocation_reversed";
   title: string;
   detail: string | null;
+  link: string | null;
 }
 
 export interface PoDashboard {
@@ -1019,4 +1020,59 @@ export interface Organisation {
   documents: { label: string; type_label: string; issue_date: string | null; expiry_date: string | null; state: ExpiryState | null }[];
   in_progress: PortalKycApplication | null;
   history: PortalKycApplication[];
+}
+
+// ---- Principal officer portal: remittances
+
+export interface RemittanceSchedule {
+  id: string;
+  reference: string;
+  month: string;
+  supplementary: boolean;
+  status: "draft" | "ready" | "allocated" | "cancelled";
+  total: string;
+  line_count: number;
+  error_count: number;
+  submitted_at: string | null;
+  credited_at: string | null;
+  from_portal: boolean;
+  editable: boolean;
+}
+
+export interface Payment {
+  id: string;
+  notice_number: string | null;
+  receipt_number: string | null;
+  status: "notified" | "pending_approval" | "confirmed" | "rejected" | "cancelled";
+  month: string | null;
+  notified_amount: string | null;
+  amount: string | null;
+  payment_date: string;
+  value_date: string | null;
+  payment_method: "eft" | "rtgs" | "cheque" | "cash_deposit" | "mobile_money";
+  payer_reference: string | null;
+  rejection_reason: string | null;
+  has_proof: boolean;
+  created_at: string;
+}
+
+export interface RemittanceMonth {
+  month: string | null;
+  stage: RemittanceStage;
+  schedules: RemittanceSchedule[];
+  payments: Payment[];
+  schedule_total: string;
+  paid: string;
+  noted: string;
+}
+
+export interface PaymentDetail extends Payment {
+  scheme_id: string;
+  scheme_name: string;
+  notes: string | null;
+  proof_filename: string | null;
+  confirmed_at: string | null;
+  can_add_proof: boolean;
+  document_kind: "receipt" | "acknowledgement" | null;
+  schedules: RemittanceSchedule[];
 }

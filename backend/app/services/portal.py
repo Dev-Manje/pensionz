@@ -124,25 +124,25 @@ def recent_activity(db: Session, scheme_ids: list[uuid.UUID], as_at: date) -> li
     names = dict(db.execute(select(Scheme.id, Scheme.name).where(Scheme.id.in_(scheme_ids))).all())
     events: list[dict] = []
 
-    def add(at, scheme_id, kind, title, detail=None):
+    def add(at, scheme_id, kind, title, detail=None, link=None):
         if at is not None and at >= since:
             events.append({"at": at, "scheme_id": scheme_id, "scheme_name": names[scheme_id], "kind": kind,
-                           "title": title, "detail": detail})
+                           "title": title, "detail": detail, "link": link})
 
     for r in db.execute(select(ContributionReceipt).where(ContributionReceipt.scheme_id.in_(scheme_ids))).scalars():
         month = f" for {periods.label(r.contribution_month)}" if r.contribution_month else ""
         if r.source == ReceiptSource.portal_notice:
             add(r.created_at, r.scheme_id, "notice_sent", f"Payment notice {r.notice_number} sent{month}",
-                f"{receipts.money_label(r.notified_amount)} paid on {r.payment_date.day} {r.payment_date:%b %Y}")
+                f"{receipts.money_label(r.notified_amount)} paid on {r.payment_date.day} {r.payment_date:%b %Y}", f"/po/remittances/{r.id}")
         if r.status == ReceiptStatus.confirmed:
             add(r.confirmed_at, r.scheme_id, "payment_confirmed", f"Payment received — receipt {r.receipt_number}",
-                f"{receipts.money_label(r.amount)}{month}")
+                f"{receipts.money_label(r.amount)}{month}", f"/po/remittances/{r.id}")
         elif r.status == ReceiptStatus.rejected and r.source == ReceiptSource.portal_notice:
             add(r.updated_at, r.scheme_id, "notice_rejected", f"Payment notice {r.notice_number} could not be confirmed",
-                r.rejection_reason)
+                r.rejection_reason, f"/po/remittances/{r.id}")
     for s in db.execute(select(ContributionSchedule).where(ContributionSchedule.scheme_id.in_(scheme_ids))).scalars():
         add(s.submitted_at, s.scheme_id, "schedule_sent", f"Schedule {s.reference} for {periods.label(s.contribution_month)} sent",
-            f"{_plural(s.line_count, 'member')} · {receipts.money_label(s.total)}")
+            f"{_plural(s.line_count, 'member')} · {receipts.money_label(s.total)}", f"/po/schedules/{s.id}")
     rows = db.execute(
         select(ContributionAllocation, ContributionSchedule)
         .join(ContributionSchedule, ContributionSchedule.id == ContributionAllocation.schedule_id)
@@ -152,10 +152,10 @@ def recent_activity(db: Session, scheme_ids: list[uuid.UUID], as_at: date) -> li
         month = periods.label(s.contribution_month)
         if a.status in (AllocationStatus.posted, AllocationStatus.reversed):
             add(a.posted_at, a.scheme_id, "allocated", f"Contributions for {month} credited to members",
-                f"{_plural(s.line_count, 'member')} · {receipts.money_label(a.net_to_members)}")
+                f"{_plural(s.line_count, 'member')} · {receipts.money_label(a.net_to_members)}", f"/po/schedules/{s.id}")
         if a.status == AllocationStatus.reversed:
             add(a.updated_at, a.scheme_id, "allocation_reversed", f"Contributions for {month} taken back for correction",
-                "Your pension administrator will contact you about the schedule.")
+                "Your pension administrator will contact you about the schedule.", f"/po/schedules/{s.id}")
     events.sort(key=lambda e: e["at"], reverse=True)
     return events[:ACTIVITY_LIMIT]
 
