@@ -84,6 +84,16 @@ const SECTIONS: Section[] = [
   { path: "users", label: "Users", icon: <PersonOutlineIcon />, roles: ["admin", "auditor"], element: <UsersPage /> },
 ];
 
+// Whether the signed-in roles may open a path: used after sign-in so a page left
+// over from someone else's session (?next=/contributions) doesn't greet a principal
+// officer with "You don't have access" — they go to their own home instead.
+export function canOpen(path: string, roles: UserRole[]): boolean {
+  const first = path.split(/[?#]/)[0].split("/")[1] ?? "";
+  if (first === "" || first === "notifications" || first === "account") return true;
+  const section = SECTIONS.find((s) => s.path === first);
+  return !!section && section.roles.some((r) => roles.includes(r));
+}
+
 function readCollapsed(): boolean {
   try {
     return localStorage.getItem(COLLAPSE_STORAGE_KEY) === "1";

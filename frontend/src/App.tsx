@@ -3,7 +3,7 @@ import { AuthProvider, useAuth } from "./auth/AuthContext";
 import { LoginPage } from "./auth/LoginPage";
 import { ForgotPasswordPage } from "./auth/ForgotPasswordPage";
 import { ResetPasswordPage } from "./auth/ResetPasswordPage";
-import { RoleRouter } from "./routes/RoleRouter";
+import { RoleRouter, canOpen } from "./routes/RoleRouter";
 import { LoadingState } from "./components/LoadingState";
 import { AuthLayout } from "./auth/AuthLayout";
 import Alert from "@mui/material/Alert";
@@ -19,7 +19,10 @@ function safeNext(search: string) {
 function LoginRoute() {
   const { user } = useAuth();
   const location = useLocation();
-  if (user) return <Navigate to={safeNext(location.search)} replace />;
+  if (user) {
+    const next = safeNext(location.search);
+    return <Navigate to={canOpen(next, user.roles) ? next : "/"} replace />;
+  }
   return <LoginPage />;
 }
 

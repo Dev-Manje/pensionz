@@ -390,7 +390,7 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       schedules (template, upload, errors); allocation & reversal (books tie out); arrears; PDFs; principal officer portal
       end to end; maker-checker and "can't approve own"; access limits (other fund / other employer → no access); phone
       and desktop.
-- [ ] UAT defect log (`docs/uat/defects.md`): ID, scenario, steps, expected vs actual, severity, status.
+- [x] UAT defect log (`docs/uat/defects.md`): ID, scenario, steps, expected vs actual, severity, status. — started 2026-11-03 (UAT-001).
 - [ ] UAT session(s) run with the user; every scenario marked pass / fail / not tested.
 - [ ] Fix UAT defects (each fix verified with `pz-verify` and re-tested in its scenario).
 - [ ] **UAT sign-off from the user** — only then start Phase 6.
