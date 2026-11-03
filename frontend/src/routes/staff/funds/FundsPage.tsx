@@ -18,6 +18,7 @@ import { useFunds } from "../../../queries/funds";
 import { FUND_TYPE_LABELS } from "../../../api/types";
 import { formatPeriod } from "../../../utils/date";
 import { FundDetailPage } from "./FundDetailPage";
+import { BonusRunPage } from "./BonusRunPage";
 import { FundFormPage } from "./FundFormPage";
 import { CategoryDetailPage } from "./categories/CategoryDetailPage";
 import { CategoryFormPage } from "./categories/CategoryFormPage";
@@ -33,6 +34,7 @@ export function FundsPage() {
       <Route path="new" element={<FundFormPage />} />
       <Route path=":fundId" element={<FundDetailPage />} />
       <Route path=":fundId/edit" element={<FundFormPage />} />
+      <Route path=":fundId/bonus-runs/:runId" element={<BonusRunPage />} />
       <Route path=":fundId/employers/new" element={<SchemeFormPage />} />
       <Route path=":fundId/employers/:schemeId" element={<SchemeDetailPage />} />
       <Route path=":fundId/employers/:schemeId/edit" element={<SchemeFormPage />} />

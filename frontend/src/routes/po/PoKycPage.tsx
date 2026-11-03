@@ -1,4 +1,4 @@
-import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
+import { Link as RouterLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Alert from "@mui/material/Alert";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
 import Link from "@mui/material/Link";
@@ -22,6 +22,9 @@ import { schemePath } from "./PoSchemePage";
 export function PoKycPage() {
   const { applicationId } = useParams();
   const navigate = useNavigate();
+  // Started from an employer application (no employer yet): back there afterwards.
+  const [search] = useSearchParams();
+  const fromApplication = search.get("application");
   const queryClient = useQueryClient();
   const query = useKyc(applicationId);
   const schemes = useMySchemes();
@@ -34,7 +37,8 @@ export function PoKycPage() {
 
   function submitted() {
     queryClient.invalidateQueries({ queryKey: poKeys.all });
-    navigate(scheme ? schemePath(scheme.id, "organisation") : "/po");
+    queryClient.invalidateQueries({ queryKey: ["employer-applications"] });
+    navigate(fromApplication ? `/po/applications/${fromApplication}` : scheme ? schemePath(scheme.id, "organisation") : "/po");
   }
 
   return (
@@ -43,6 +47,11 @@ export function PoKycPage() {
         <Link component={RouterLink} to="/po" underline="hover" color="inherit">
           My schemes
         </Link>
+        {fromApplication && !scheme && (
+          <Link component={RouterLink} to={`/po/applications/${fromApplication}`} underline="hover" color="inherit">
+            Employer application
+          </Link>
+        )}
         {scheme && (
           <Link component={RouterLink} to={schemePath(scheme.id, "organisation")} underline="hover" color="inherit">
             {scheme.name}

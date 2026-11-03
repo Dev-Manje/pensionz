@@ -1,5 +1,6 @@
 from app.models.approval import ApprovalRequest, ApprovalStatus
 from app.models.audit import AuditEvent
+from app.models.bonus import BonusDeclaration, BonusKind, BonusRun, BonusRunLine, BonusRunStatus
 from app.models.category import BenefitCategory, BenefitCategoryTerms, BenefitDesign, CategoryStatus, RateType, SalaryBasis
 from app.models.contribution import (
     AllocationReceipt, AllocationStatus, ContributionAllocation, ContributionReceipt, ContributionSchedule, ContributionScheduleLine, PaymentMethod, ReceiptSource, ReceiptStatus, ScheduleSource, ScheduleStatus,
@@ -24,9 +25,11 @@ from app.models.reference import (
     TransactionEffect, TransactionType, Village,
 )
 from app.models.regulatory import RegulatoryParameterVersion, TaxBand, TaxTable, TaxTableKind
-from app.models.scheme import BillingFrequency, Scheme, SchemeOfficer, SchemeStatus
+from app.models.scheme import BillingFrequency, EmployerApplication, EmployerApplicationStatus, Scheme, SchemeOfficer, SchemeStatus
 
 __all__ = [
+    "BonusDeclaration", "BonusKind", "BonusRun", "BonusRunLine", "BonusRunStatus",
+    "EmployerApplication", "EmployerApplicationStatus",
     "ApprovalRequest", "ApprovalStatus", "AuditEvent", "OneTimeCode", "Bank", "BankAccountPurpose", "BankBranch", "Fund", "FundBankAccount",
     "AccountType", "Country", "District", "LedgerBehaviour", "ReferenceItem", "ReferenceList", "TraditionalAuthority",
     "TransactionEffect", "TransactionType", "Village", "FeeBasis", "FeeFrequency", "FeePayer", "FeeRule", "FeeType", "ApplicationStatus", "ClientType", "DeclarationVersion", "DocumentReview", "KycApplication", "KycDocument", "Party",

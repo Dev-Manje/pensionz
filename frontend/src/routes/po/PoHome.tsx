@@ -12,11 +12,12 @@ import { BRAND } from "../../brand";
 import { LoadingState } from "../../components/LoadingState";
 import { StatusChip } from "../../components/StatusChip";
 import { usePoDashboard } from "../../queries/po";
+import { useApplicationFunds, useMyApplications } from "../../queries/employerApplications";
 import type { DashboardScheme, PortalActivity } from "../../api/types";
 import { formatDate, formatDateTime, formatPeriod } from "../../utils/date";
 import { formatMoney } from "../../utils/format";
 import { dueDayLabel } from "../staff/funds/schemes/schemeLabels";
-import { STAGE_TEXT, dueText, isLate } from "./poLabels";
+import { APPLICATION_STATUS_TEXT, STAGE_TEXT, dueText, isLate } from "./poLabels";
 import { schemePath } from "./PoSchemePage";
 
 const SCHEME_STATUS_TEXT: Record<DashboardScheme["status"], string> = {
@@ -201,6 +202,50 @@ function Activity({ items, many }: { items: PortalActivity[]; many: boolean }) {
   );
 }
 
+// The officer's applications for new employers, and the way to start one
+// (only when the administrator has given them a fund to apply into).
+function Applications() {
+  const apps = useMyApplications();
+  const funds = useApplicationFunds();
+  const open = (apps.data ?? []).filter((a) => a.status !== "withdrawn" && !(a.status === "approved" && a.decided_at && Date.now() - Date.parse(a.decided_at) > 30 * 864e5));
+  if (!funds.data?.length && !open.length) return null;
+  return (
+    <Paper sx={{ p: { xs: 2.5, sm: 3 } }} component="section" aria-label="Employer applications">
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ justifyContent: "space-between", alignItems: { sm: "center" }, mb: open.length ? 2 : 0 }}>
+        <div>
+          <Typography variant="h2">Employer applications</Typography>
+          <Typography color="text.secondary">Apply for an employer to join a fund; {BRAND.administrator} reviews and sets it up.</Typography>
+        </div>
+        {!!funds.data?.length && (
+          <Button variant="contained" component={RouterLink} to="/po/applications/new" sx={{ whiteSpace: "nowrap" }}>
+            Apply for an employer
+          </Button>
+        )}
+      </Stack>
+      <Stack divider={<Divider />} spacing={1.25}>
+        {open.map((a) => {
+          const st = APPLICATION_STATUS_TEXT[a.status];
+          return (
+            <Stack key={a.id} direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ justifyContent: "space-between", alignItems: { sm: "center" } }}>
+              <Box>
+                <Link component={RouterLink} to={`/po/applications/${a.id}`} underline="hover" sx={{ fontWeight: 600 }}>
+                  {a.details.name}
+                </Link>
+                <Typography variant="body2" color="text.secondary">
+                  {a.fund_name} · {a.reference}
+                </Typography>
+              </Box>
+              <Box>
+                <StatusChip status={a.status} label={st.label} tone={st.tone} />
+              </Box>
+            </Stack>
+          );
+        })}
+      </Stack>
+    </Paper>
+  );
+}
+
 // Principal officer dashboard (FR-PRT-001, FR-PRT-006): every employer the
 // officer acts for — possibly several, in several funds — with this month's
 // remittance (last month's contributions, due this month), arrears and recent activity.
@@ -247,8 +292,8 @@ export function PoHome() {
               )}
               {schemes.length === 0 && (
                 <Typography color="text.secondary">
-                  Your sign-in has not been linked to a scheme yet. Once {BRAND.administrator} links it, you will be able to send monthly
-                  contribution schedules, add and update members, and follow each remittance here.
+                  You don't act for an employer yet. Apply for your employer to join a fund below, or ask {BRAND.administrator} to link your
+                  sign-in to it. Then you can send monthly contribution schedules, add and update members, and follow each remittance here.
                 </Typography>
               )}
               {groups.map(([fundName, list]) => (
@@ -263,6 +308,7 @@ export function PoHome() {
               ))}
             </Stack>
           </Paper>
+          <Applications />
           {schemes.length > 0 && <Activity items={dashboard.data.activity} many={schemes.length > 1} />}
         </>
       )}

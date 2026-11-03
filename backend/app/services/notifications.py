@@ -78,6 +78,11 @@ def notify_one_time_code(db: Session, user: User, code: str, minutes: int, reaso
            "If you didn't try to do this, change your password.")
 
 
+def notify_officer_funds_added(db: Session, user: User, fund_names: str) -> None:
+    _notify(db, user, "portal.officer_funds_added", f"You can now apply to {fund_names}",
+            f"You can now apply for an employer to join {fund_names} from your portal.", link="/po")
+
+
 def notify_portal_scheme_linked(db: Session, user: User, scheme_name: str, fund_name: str) -> None:
     _notify(db, user, "portal.scheme_linked", f"You can now act for {scheme_name}",
             f"You have been linked to {scheme_name} in {fund_name} as a principal officer. "

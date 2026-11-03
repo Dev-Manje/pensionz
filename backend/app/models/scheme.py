@@ -7,10 +7,10 @@ contacts, and the principal officers who remit for it through the portal
 Created and changed only through the "scheme_setup" approval."""
 import enum
 import uuid
-from datetime import date
+from datetime import date, datetime
 
-from sqlalchemy import Date, ForeignKey, Integer, String, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -73,3 +73,47 @@ class SchemeOfficer(UUIDPKMixin, CreatedAtMixin, Base):
 
     scheme: Mapped["Scheme"] = relationship(back_populates="officers")
     user = relationship("User", lazy="joined")
+
+
+class EmployerApplicationStatus(str, enum.Enum):
+    # The officer is still filling it in.
+    draft = "draft"
+    # Sent to the administrator; scheme setup reviews it.
+    submitted = "submitted"
+    # Sent back to the officer with a note.
+    returned = "returned"
+    # Scheme setup sent the final terms to a checker.
+    in_approval = "in_approval"
+    approved = "approved"
+    rejected = "rejected"
+    withdrawn = "withdrawn"
+
+
+class EmployerApplication(UUIDPKMixin, TimestampMixin, Base):
+    """A principal officer's application for a new employer to join a fund
+    (decided 2026-11-03). The officer proposes the details and the members'
+    categories and rates and completes the organisation KYC; compliance
+    approves the KYC, scheme setup sets the final terms (employer code,
+    default investment option, any rate changes) and a scheme-setup checker
+    approves — only then is the employer created, with the officer linked."""
+
+    __tablename__ = "employer_application"
+
+    reference: Mapped[str] = mapped_column(String(20), nullable=False, unique=True)
+    fund_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("fund.id"), nullable=False, index=True)
+    officer_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=False, index=True)
+    status: Mapped[EmployerApplicationStatus] = mapped_column(
+        str_enum(EmployerApplicationStatus, 20), nullable=False, default=EmployerApplicationStatus.draft, index=True)
+    # Organisation details as proposed (name, registration, address, contact, contribution day …).
+    details: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    # [{"name", "employee_rate", "employer_rate", "salary_basis", "normal_retirement_age"}] as proposed.
+    categories: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    # The final terms scheme setup sent for approval (code, join date, full category terms).
+    final_terms: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    kyc_application_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("kyc_application.id"), nullable=True)
+    scheme_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("scheme.id"), nullable=True)
+    # The latest note to the officer (returned / rejected / approved).
+    review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=True)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

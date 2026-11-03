@@ -21,14 +21,17 @@ Say "next task" or "work on [item]" — the `pz-task` skill drives the loop.
 
 ## Open decisions
 
-Open — employer onboarding by the principal officer (added 2026-11-03, ask before building):
-- [ ] **Employer onboarding by the officer** — *proposed defaults:* (a) the administrator invites an officer to one or
-      more funds; the officer can only apply into those funds; (b) the officer proposes categories and rates, scheme
-      setup may change them before approving (the officer sees the final terms); (c) two checks — compliance approves the
-      KYC, a scheme-setup checker approves the employer — and the employer goes live only when both are done;
-      (d) fees and investment options are set by staff, not the officer; (e) staff can still create employers directly.
-
 Answered:
+- [x] **Employer onboarding by the officer** — 2026-11-03 (user accepted the defaults): (a) the administrator invites an
+      officer to one or more funds; the officer can only apply into those funds; (b) the officer proposes categories and
+      rates, scheme setup may change them before approving (the officer sees the final terms); (c) two checks — compliance
+      approves the KYC, a scheme-setup checker approves the employer — the employer goes live only when both are done;
+      (d) fees and investment options are set by staff, not the officer; (e) staff can still create employers directly.
+- [x] **Bonus calculation method** — 2026-11-03 (user accepted the default): opening balance × rate × days/365 plus each
+      contribution × rate × days-in-period-from-allocation/365; applies to EE+ER+AVC+transfer-in; interim rate for
+      mid-period exits with final true-up; 2 dp half-up per member per component.
+- [x] **UAT scripts format** — 2026-11-03 (user): a Word document in user-story format with the steps and a way to
+      record results.
 - [x] **Stack** — 2026-11-01: same as Money Market (FastAPI/SQLAlchemy/Alembic/Postgres,
       React/TS/Vite/MUI, Docker Compose). Ports 5178 / 8002 / 8026.
 - [x] **Scope** — 2026-11-01: DC employer, umbrella, personal pensions, DB (+ minors' trust from legacy).
@@ -59,9 +62,6 @@ Answered:
 Open — the default in *italics* is what we build to until answered (from REQUIREMENTS §10):
 - [ ] **Legacy system & extract** — PFS on Oracle XE identified 2026-11-01 (`docs/legacy/PFS-analysis.md`);
       still need DB access/export, volumes, history depth. Needed by Phase 11.
-- [ ] **Bonus calculation method** — *opening balance × rate × days/365 plus each contribution ×
-      rate × days-in-period-from-allocation/365; applies to EE+ER+AVC+transfer-in; interim rate for
-      mid-period exits with final true-up; 2 dp half-up per member per component.* Needed by Phase 6.
 - [ ] **Ageing buckets** on member screen — *age of employer contributions receivable (arrears).*
 - [ ] **UPID / BI UPID, Regulatory Authority Data tab, KYC 1–4 tabs, "Share" account type** —
       *store UPID/BI UPID as optional text fields; regulatory tab = free key/value fields until the
@@ -373,29 +373,55 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       cancelled by staff, allocation reversed; payment confirmed / not confirmed and credited (Phase 4) now link into the
       portal. pytest 4 new, job run on dev (2 reminders by email, second run skipped), inbox screenshot viewed.
 
-- [ ] **Principal officer onboarding by the pension administrator** (decided by the user 2026-11-03: "POs will be
-      onboarded by the Pension Admins"). Staff create the officer's portal login on its own — not only from an existing
-      employer's screen — for a fund (or several), with invitation email and emailed code at sign-in (reuse
-      `_officer_for` / `notify_invite`); maker-checker; staff list of officers with their employers and status.
-      FR-PRT-006
-- [ ] **Employer (scheme) onboarding by the principal officer** (user 2026-11-03: "PO will onboard their schemes"):
-      in the portal the officer applies to join a fund with a new employer — organisation details, contact, contribution
-      day, members' categories and rates as proposed — plus the organisation KYC (reuse the portal KYC stepper);
-      compliance reviews the KYC, scheme setup reviews the employer (checks rates against the statutory minimum and the
-      fund's rules) and approves; on approval the employer is created with the officer linked and the KYC client linked.
-      Officer follows the application's status and the reviewers' notes; one officer can apply for several employers.
-      FR-PRT-001, FR-PRT-005, FR-ONB-101. *Needs the user's answers (Open decisions → "Employer onboarding by the
-      officer") before building.*
+- [x] **Principal officer onboarding by the pension administrator** (decided by the user 2026-11-03: "POs will be
+      onboarded by the Pension Admins"). FR-PRT-006 — done 2026-11-03, see `services/officers.py`, `api/v1/officers.py`,
+      `routes/staff/onboarding/` (sidebar **Onboarding** → "Principal officers"): scheme-setup maker (or admin) adds an
+      officer for one or more funds they administer (approval kind `officer_access`, checker scheme-setup checker; one fund →
+      fund-scoped, several → any checker); on approval a principal-officer login + invitation email ("apply for your employer
+      to join …"), emailed code at every sign-in as before; the funds are kept in `user_fund_access` (= "may apply into" for
+      portal users; staff endpoints still need a staff role); change funds/name/phone later (officer told by bell + email when
+      a fund is added); resend invitation / reset link; list scoped to the viewer's funds with employers, status, last
+      sign-in. Officers linked from an employer screen count that employer's fund. pytest 8 new, live smoke 22/22 incl. 403s,
+      screenshots 1440/390 viewed.
+- [x] **Employer (scheme) onboarding by the principal officer** (user 2026-11-03: "PO will onboard their schemes";
+      defaults accepted 2026-11-03). FR-PRT-001, FR-PRT-005, FR-ONB-101 — done 2026-11-03, see
+      `services/employer_applications.py`, `api/v1/employer_applications.py`, migration `a6c1f9e38b20`,
+      `routes/po/PoApplicationPage.tsx`, `routes/staff/onboarding/ApplicationReviewPage.tsx`: officer applies (dashboard
+      "Employer applications" → "Apply for an employer") into a fund staff gave them — organisation, contact, first month, due
+      day, categories with EE/ER % (checked against the statutory minimums and retirement band) — and starts the organisation
+      KYC from it (the ordinary corporate stepper, prefilled); sending needs everything filled in and the KYC sent to
+      compliance. Scheme setup reviews (Onboarding → "Employer applications"): return with a note (officer edits and sends
+      again), reject, or **Set final terms** (employer code, join date, per category code/rates/salary basis/NRA/default
+      investment option/waiting period/group life — prefilled from the proposal) → only once compliance approved the KYC →
+      approval kind `employer_onboarding` (scheme-setup checker); approval creates the employer with the officer linked, the
+      KYC client linked and its categories; checker rejection returns it to scheme setup. Officer sees status, notes and the
+      final terms; bells/emails at each step (submitted / KYC approved → scheme setup; returned / rejected / approved →
+      officer). Fees stay staff-set; staff can still create employers directly. pytest 5 new, live smoke 25/25 (full flow on
+      dev: EMP-2026-000001 → LWW01), screenshots 1440/390 viewed.
 
 ## Phase 6 — Bonus / earnings (FR-EAR)
 
-*Next session: first the two new Phase 5 onboarding tasks above (ask Open decisions → "Employer onboarding by the
-officer"), then Phase 6 (ask Open decisions → "Bonus calculation method", still unanswered; the default in italics is
-the proposal).*
-
-- [ ] Bonus declarations per fund (period, rate, interim/final) with approval. FR-EAR-001
-- [ ] Bonus run: preview → approve → post Bonus (type 6) per member per component; idempotent batch. FR-EAR-002, 003
-- [ ] Bonus reversal (type 5) whole run / individual; interim → final true-up. FR-EAR-004
+- [x] Bonus declarations per fund (period, rate, interim/final) with approval. FR-EAR-001 — done 2026-11-03, see
+      `services/bonus.py`, `api/v1/bonus.py`, migration `b3d9e5a17c42`, fund tab **Bonus** (`FundBonusTab.tsx`): finance
+      declares (kind interim/final, period ≤ 1 year, % a year, earning components — default EE/ER/AVC/transfer-in, trustee
+      resolution), finance checker approves (kind `bonus_declaration`); no overlapping declaration of the same kind; DC funds only.
+- [x] Bonus run: preview → approve → post Bonus (type 6) per member per component; idempotent batch. FR-EAR-002, 003 — done
+      2026-11-03, `BonusRunPage.tsx`: method as decided (opening × rate × days/365 + each movement × rate × days to the end/365,
+      days counted both ends, movements = every non-bonus transaction so withdrawals stop earning, exit date caps the period,
+      2 dp half-up per member/component); lines keep the working (days, opening, movements, calculated, already credited);
+      final run only after the period ended and one live final run per declaration (DB partial unique index); interim run for
+      chosen leavers to their exit date or an as-at date; send → finance checker (kind `bonus_run`) recalculates and refuses
+      if balances changed since the preview; one entry Dr 2600 / Cr 2000 per run in the open month; bonus rows carry the
+      period (`contribution_month` = last month of the period) so the next period's opening balance includes it even when
+      posted later. pytest 7 new with known answers (32,000.00 / 64,000.00; 3,387.12; 1,643.84 → 2,136.99 true-up 493.15),
+      live run on dev UMB01 (BR-2026-00004 posted, ledger balanced and ties), screenshots 1440/390 viewed.
+- [x] Bonus reversal (type 5) whole run / individual; interim → final true-up. FR-EAR-004 — done 2026-11-03: final run deducts
+      bonus already credited for the period (interim) — positive difference posts type 6, negative type 5; reversal of the
+      whole run or chosen members (kind `bonus_reversal`, reason required) posts the paired type per line; a fully reversed
+      run frees the declaration to be run again. pytest (in the 7 above) incl. final below interim (−328.77) and partial
+      then full reversal back to 2600 = 0.
+      Follow-ups: member statements show bonus per period (Phase 7); posting investment income into 2600 so the reserve
+      funds the bonus (Phase 10 accounting, finance to confirm); negative rates not supported (rate ≥ 0).
 
 ## Phase 7 — Enquiries, statements & member portal (FR-ENQ, FR-PRT-002)
 

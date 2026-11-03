@@ -559,3 +559,32 @@ officers by `GET /po/schemes/{id}/statements/...` (audited `statement_downloaded
 - Event notices to the employer's officers (bell + email): schedule received (when an officer sends one), schedule sent
   back (staff re-open a portal schedule — the officers can edit it again) or cancelled by staff, allocation reversed;
   "contributions credited" now links to `/po/schedules/<id>`.
+
+### Principal officers onboarded by staff (FR-PRT-006) — 2026-11-03
+
+`services/officers.py`: approval kind `officer_access` (maker scheme-setup maker or admin with access to every chosen fund;
+checker scheme-setup checker). Create = principal-officer login + `user_fund_access` rows for the funds + invitation; update =
+name / phone / funds (funds the maker can't see are kept). For a portal user `user_fund_access` means "may apply into" —
+`officer_fund_ids` = granted funds ∪ funds of linked employers. Staff list `GET /officers` is scoped to the viewer's funds.
+
+### Employer onboarding by the principal officer (FR-PRT-001, 005, FR-ONB-101) — 2026-11-03
+
+`employer_application` (EMP-YYYY-NNNNNN; draft → submitted ⇄ returned → in_approval → approved / rejected / withdrawn).
+Details + proposed categories in JSON; `kyc_application_id` is an ordinary corporate KYC with the officer as applicant (on
+approval it gets `scheme_id` so the employer's other officers see it). Staff `propose` stores `final_terms` (code, join date,
+categories with full `TermsIn`, validated by `categories.validate_terms`) and submits kind `employer_onboarding`; `_apply`
+needs the KYC approved and creates `scheme` (+ officer link, `party_id`) and `benefit_category` + terms; checker rejection →
+back to `submitted`. `kyc._approve` calls `employer_applications.kyc_approved` to tell scheme setup.
+
+## Phase 6 — Bonus / earnings (FR-EAR)
+
+### Declared bonus (FR-EAR-001…004) — 2026-11-03
+
+`services/bonus.py`, tables `bonus_declaration`, `bonus_run`, `bonus_run_line` (migration `b3d9e5a17c42`). Calculation per
+member and earning component, from the member sub-ledger: opening = Σ signed non-bonus rows dated before the period start +
+bonus rows tagged (`contribution_month`) for earlier periods; movements = non-bonus rows dated in [start, to_date], each ×
+(to_date − date + 1) days; already credited = bonus rows tagged with this period; to_date = period end, or the exit /
+death date in the period, or an interim run's as-at date. Amount = round(opening × r × days/365 + Σ movement bonus) − already
+credited, posted as type 6 (positive) or 5 (negative) through `ledger.post_member_transactions` (GL from Setup → transaction
+types: 6 = Dr 2600 / Cr 2000). Approval kinds: `bonus_declaration`, `bonus_run` (re-checks the preview), `bonus_reversal`
+(per-line paired type, whole run or chosen members). Roles: finance makes, finance checker approves.

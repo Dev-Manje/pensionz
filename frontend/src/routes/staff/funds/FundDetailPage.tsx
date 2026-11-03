@@ -24,6 +24,7 @@ import { StatusChip } from "../../../components/StatusChip";
 import { TableStateRow } from "../../../components/TableStateRow";
 import { useUrlTab } from "../../../hooks/useUrlState";
 import { useFund } from "../../../queries/funds";
+import { FundBonusTab } from "./FundBonusTab";
 import { FundFeesTab } from "./FundFeesTab";
 import { FundLedgerTab } from "./FundLedgerTab";
 import { FundOptionsTab } from "./FundOptionsTab";
@@ -32,7 +33,7 @@ import { FundSchemesTab } from "./schemes/FundSchemesTab";
 import { formatDate, formatPeriod, MONTH_NAMES } from "../../../utils/date";
 import { BANK_PURPOSE_LABELS, FUND_TYPE_LABELS, type Fund } from "../../../api/types";
 
-const TABS = ["details", "employers", "investment-options", "fees", "trustees", "bank-accounts", "processing-months", "ledger"] as const;
+const TABS = ["details", "employers", "investment-options", "fees", "trustees", "bank-accounts", "processing-months", "ledger", "bonus"] as const;
 type FundTab = (typeof TABS)[number];
 
 function Details({ fund }: { fund: Fund }) {
@@ -197,6 +198,7 @@ export function FundDetailPage() {
         <Tab value="bank-accounts" label={`Bank accounts (${fund.bank_accounts.length})`} />
         <Tab value="processing-months" label="Processing months" />
         <Tab value="ledger" label="Ledger" />
+        <Tab value="bonus" label="Bonus" />
       </Tabs>
       {tab === "details" && <Details fund={fund} />}
       {tab === "employers" && <FundSchemesTab fund={fund} />}
@@ -206,6 +208,7 @@ export function FundDetailPage() {
       {tab === "bank-accounts" && <BankAccounts fund={fund} />}
       {tab === "processing-months" && <FundPeriodsTab fund={fund} />}
       {tab === "ledger" && <FundLedgerTab fund={fund} />}
+      {tab === "bonus" && <FundBonusTab fund={fund} />}
     </>
   );
 }

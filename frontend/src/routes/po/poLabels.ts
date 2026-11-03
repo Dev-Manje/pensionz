@@ -1,4 +1,5 @@
 import type { ExpiryState, KycStatus, RemittanceStage } from "../../api/types";
+import type { EmployerApplicationStatus } from "../../api/employerApplications";
 import type { StatusTone } from "../../utils/labels";
 
 // Plain-language stage of this month's remittance, with what happens next.
@@ -91,3 +92,14 @@ export const EXIT_REASONS: [string, string][] = [
   ["died", "Died"],
   ["other", "Other (say why)"],
 ];
+
+// Employer application status in the officer's words.
+export const APPLICATION_STATUS_TEXT: Record<EmployerApplicationStatus, { label: string; tone: StatusTone }> = {
+  draft: { label: "Not sent yet", tone: "default" },
+  submitted: { label: "Sent — being reviewed", tone: "info" },
+  returned: { label: "Needs changes", tone: "warning" },
+  in_approval: { label: "Being approved", tone: "info" },
+  approved: { label: "Approved — employer set up", tone: "success" },
+  rejected: { label: "Not accepted", tone: "error" },
+  withdrawn: { label: "Withdrawn", tone: "default" },
+};

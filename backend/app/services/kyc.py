@@ -340,6 +340,9 @@ def _approve(db: Session, user: User, app: KycApplication) -> None:
     app.status, app.decided_by_user_id, app.decided_at = ApplicationStatus.approved, user.id, now
     audit.record(db, user.id, "kyc_application", app.id, "approved", after={"party_id": party.id, "review_due": due, "risk": app.risk_rating.value})
     _link_scheme(db, user, app, party)
+    from app.services import employer_applications  # imports this module
+
+    employer_applications.kyc_approved(db, app)
     who = _applicant_or_capturer(db, app)
     if who:
         notifications.notify_kyc_decided(db, who, app.reference, True, None, app.id, applicant_link(app))

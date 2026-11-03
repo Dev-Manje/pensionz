@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router-dom";
+import { PoApplicationPage } from "./PoApplicationPage";
 import { PoHome } from "./PoHome";
 import { PoImportPage } from "./PoImportPage";
 import { PoKycPage } from "./PoKycPage";
@@ -16,6 +17,7 @@ export function PoPortal() {
     <Routes>
       <Route index element={<PoHome />} />
       <Route path="schemes/:schemeId" element={<PoSchemePage />} />
+      <Route path="applications/:applicationId" element={<PoApplicationPage />} />
       <Route path="kyc/:applicationId" element={<PoKycPage />} />
       <Route path="schedules/:scheduleId" element={<PoSchedulePage />} />
       <Route path="remittances/:paymentId" element={<PoPaymentPage />} />

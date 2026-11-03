@@ -29,6 +29,7 @@ import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import PaymentsOutlinedIcon from "@mui/icons-material/PaymentsOutlined";
+import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
 import { useAuth } from "../auth/AuthContext";
 import { RouteErrorBoundary } from "../components/RouteErrorBoundary";
 import { NotificationBell } from "../components/notifications/NotificationBell";
@@ -44,6 +45,7 @@ import { SetupPage } from "./staff/setup/SetupPage";
 import { KycPage } from "./staff/kyc/KycPage";
 import { MembersPage } from "./staff/members/MembersPage";
 import { ContributionsPage } from "./staff/contributions/ContributionsPage";
+import { OnboardingPage } from "./staff/onboarding/OnboardingPage";
 import { MemberHome } from "./member/MemberHome";
 import { PoPortal } from "./po/PoPortal";
 import { ROLE_LABELS, STAFF_ROLES } from "../api/types";
@@ -78,6 +80,7 @@ const SECTIONS: Section[] = [
   { path: "kyc", label: "KYC", icon: <FactCheckOutlinedIcon />, roles: ["compliance", "relationship_manager", "member_admin", "admin", "auditor"], element: <KycPage /> },
   { path: "members", label: "Members", icon: <GroupsOutlinedIcon />, roles: STAFF_ROLES, element: <MembersPage /> },
   { path: "contributions", label: "Contributions", icon: <PaymentsOutlinedIcon />, roles: STAFF_ROLES, element: <ContributionsPage /> },
+  { path: "onboarding", label: "Onboarding", icon: <BadgeOutlinedIcon />, roles: ["scheme_config_maker", "scheme_config_checker", "admin", "auditor", "relationship_manager", "compliance"], element: <OnboardingPage /> },
   { path: "funds", label: "Funds", icon: <AccountBalanceOutlinedIcon />, roles: STAFF_ROLES, element: <FundsPage /> },
   { path: "regulatory", label: "Regulatory", icon: <GavelOutlinedIcon />, roles: STAFF_ROLES, element: <RegulatoryPage /> },
   { path: "setup", label: "Setup", icon: <SettingsOutlinedIcon />, roles: STAFF_ROLES, element: <SetupPage /> },

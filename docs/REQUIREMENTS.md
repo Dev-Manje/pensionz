@@ -373,7 +373,14 @@ User/Role/FundAccess · AuditEvent · Notification/Outbox · MigrationBatch.
 2. **Legacy system:** *partly answered 2026-11-01* — PFS (Independent Technologies), Oracle Forms on
    Oracle XE. Still needed: DB access/credentials or an export, number of funds/members, history depth.
 3. **Bonus calculation:** exact method (time-weighting, interim vs final, which components earn
-   bonus, rounding), and who declares (trustees per fund?).
+   bonus, rounding), and who declares (trustees per fund?). *Resolved 2026-11-03 (user): opening balance × rate ×
+   days/365 plus each contribution × rate × days from allocation to period end/365; EE+ER+AVC+transfer-in earn bonus;
+   interim rate for mid-period exits with final true-up; 2 dp half-up per member per component. Declared per fund
+   through maker-checker.*
+17. **Employer onboarding by the principal officer:** *Resolved 2026-11-03 (user): staff invite an officer to one or
+    more funds and the officer applies only into those; the officer proposes categories/rates which scheme setup may
+    change before approving; compliance approves the KYC and a scheme-setup checker approves the employer — live only when
+    both are done; fees and investment options are staff-set; staff can still create employers directly.*
 4. **What is aged** in the 30/60/90/120/150-day buckets? *Seen on the Client Statement as "aged
    analysis" of the account balance — confirm the ageing rule (by transaction date?).*
 5. **UPID / BI UPID** and the **Regulatory Authority Data** tab: meaning and field list.
