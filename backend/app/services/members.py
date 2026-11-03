@@ -28,7 +28,7 @@ from app.models.member import AssignmentReason, Member, MemberAssignment, Member
 from app.models.reference import Bank, BankBranch, Country, District, ReferenceItem, ReferenceList, TraditionalAuthority, Village
 from app.models.scheme import Scheme, SchemeStatus
 from app.schemas.member import MemberCreateIn, MemberDetailsIn, MoveIn, StatusChangeIn
-from app.services import approvals, audit, config_resolver, kyc_forms
+from app.services import approvals, audit, config_resolver, kyc_forms, notifications
 from app.services.kyc import today
 
 KIND_NEW = "member_new"
@@ -40,6 +40,7 @@ CHECKERS = frozenset({UserRole.member_checker})
 MAKERS = (UserRole.member_admin,)
 
 DETAIL_FIELDS = tuple(MemberDetailsIn.model_fields)
+BANK_FIELDS = ("bank_id", "bank_branch_id", "bank_account_name", "bank_account_number")
 DATE_FIELDS = {"date_of_birth", "date_joined_fund", "date_joined_employer"}
 UUID_FIELDS = {f for f in DETAIL_FIELDS if f.endswith("_id")}
 
@@ -565,6 +566,7 @@ def create_member(db: Session, fund: Fund, d: dict, scheme_id, category_id, code
                               reason=joined_reason, requested_by_user_id=request.initiated_by_user_id, approved_by_user_id=checker.id,
                               approval_request_id=request.id))
     audit.record(db, checker.id, "member", member.id, "created", after={**values_of(member), "account_code": code}, fund_id=fund.id)
+    notifications.notify_member_joined(db, member, fund.name)
     return member
 
 
@@ -581,11 +583,14 @@ def _apply_update(db: Session, request: ApprovalRequest, checker: User) -> None:
     before = values_of(member)
     d = _from_payload(request.payload["_values"])
     _check_details(db, fund, d, member)
+    old_email = member.email
     for field, value in d.items():
         setattr(member, field, value)
     member.id_number_key = id_key(member.id_number)
     db.flush()
     audit.record(db, checker.id, "member", member.id, "updated", before=before, after=values_of(member), fund_id=member.fund_id)
+    if any(before.get(f) != values_of(member).get(f) for f in BANK_FIELDS):
+        notifications.notify_member_bank_changed(db, member, [member.email, old_email])
 
 
 def _apply_status(db: Session, request: ApprovalRequest, checker: User) -> None:

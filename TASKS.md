@@ -592,3 +592,13 @@ included; Phases 6 and 7 are built first (the user tried the portal on 2026-11-0
   statements). Added: officer onboarding by staff + employer onboarding by the officer (Phase 5). **Resume here:** ask the
   onboarding and bonus decisions, build the two onboarding tasks, then Phases 6 and 7, then the
   clean-start UAT data and scripts.
+- 2026-11-03 — Decisions answered (employer onboarding defaults, bonus method, UAT doc = Word, user-story format). **Phase 5
+  onboarding tasks and Phase 6 built, verified, committed and pushed** (`7fb6acf`). **Phase 7 started, NOT verified, not
+  committed** (stopped on the user's request to change location): backend `services/member_statements.py`,
+  `services/io/member_documents.py`, `services/member_portal.py`, `api/v1/enquiries.py`, `api/v1/member_portal.py`, migration
+  `c8e2f4a61d07` (member.portal_user_id, applied to dev DB), member notifications (joined / bank changed / statement ready) —
+  pytest 12 new pass; frontend Enquiries section (`routes/staff/enquiries/`), member portal (`routes/member/MemberPortal.tsx`,
+  `MemberKycPage.tsx`), `/register` page — `tsc` clean. **Resume here:** run the full pytest + vitest, live smoke on a dev API
+  (`--port 8012` without `--reload`; set `MSYS_NO_PATHCONV=1` for the screenshot script), screenshots of Enquiries, bulk
+  statements, member portal tabs and /register at 1440 + 390, then tick the Phase 7 items, commit, push; then UAT prep
+  (clean-start seed, UAT data refresh, Word UAT scripts in user-story format with result columns).

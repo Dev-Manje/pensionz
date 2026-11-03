@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import approvals, arrears, auth, bonus, categories, employer_applications, fee_rules, funds, investment_options, kyc, ledger, member_imports, members, notifications, officers, periods, po, po_members, po_remittances, receipts, reference, schedules, regulatory, schemes, setup, users
+from app.api.v1 import approvals, arrears, auth, bonus, categories, employer_applications, enquiries, fee_rules, funds, investment_options, kyc, ledger, member_imports, member_portal, members, notifications, officers, periods, po, po_members, po_remittances, receipts, reference, schedules, regulatory, schemes, setup, users
 
 api_router = APIRouter()
 api_router.include_router(auth.router)
@@ -24,6 +24,8 @@ api_router.include_router(member_imports.router)
 api_router.include_router(members.router)
 api_router.include_router(ledger.router)
 api_router.include_router(bonus.router)
+api_router.include_router(enquiries.router)
+api_router.include_router(member_portal.router)
 api_router.include_router(receipts.router)
 api_router.include_router(schedules.router)
 api_router.include_router(arrears.router)

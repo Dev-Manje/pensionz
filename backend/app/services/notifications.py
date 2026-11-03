@@ -115,9 +115,14 @@ def notify_approval_decided(db: Session, maker: User, summary: str, approved: bo
     outcome = "approved" if approved else "rejected"
     body = f"{summary} — {outcome}." + (f" Comment: {comment}" if comment else "")
     # Principal officers follow their requests in the portal, not on the staff approvals screen.
-    portal_only = not maker.is_staff and maker.has_role(UserRole.principal_officer)
-    _notify(db, maker, f"approval.{outcome}", f"Request {outcome}", body,
-            link=f"/po/requests/{request_id}" if portal_only else f"/approvals/{request_id}",
+    # Members follow theirs on the member portal's Requests page.
+    if maker.is_staff:
+        link = f"/approvals/{request_id}"
+    elif maker.has_role(UserRole.principal_officer):
+        link = f"/po/requests/{request_id}"
+    else:
+        link = "/member"
+    _notify(db, maker, f"approval.{outcome}", f"Request {outcome}", body, link=link,
             entity_type="approval_request", entity_id=request_id)
 
 
@@ -190,3 +195,47 @@ def notify_arrears_escalation(db: Session, staff: list[User], scheme_label: str,
         _notify(db, user, "employer.arrears_escalated", f"Arrears: {scheme_label}",
                 f"{scheme_label} owes {total}; the oldest unpaid month is {oldest}. The employer has been reminded.",
                 link=f"/contributions?fund={fund_id}&tab=arrears", email=False)
+
+
+# --- members (FR-NOT-003) -----------------------------------------------------
+
+def _email_member(db: Session, member, event: str, subject: str, body: str, *, link: str | None = None) -> None:
+    """To the member's email on record — members may not have a portal login."""
+    if not member.email:
+        return
+    db.add(NotificationOutbox(
+        event=event, channel=NotificationChannel.email, recipient_user_id=member.portal_user_id, recipient_address=member.email,
+        subject=subject, body=body, link=link, entity_type="member", entity_id=str(member.id),
+    ))
+
+
+def notify_member_joined(db: Session, member, fund_name: str) -> None:
+    _email_member(db, member, "member.joined", f"Welcome to {fund_name}",
+                  f"Dear {member.first_name}, you are now a member of {fund_name} (member number {member.account_code}). "
+                  f"You can follow your savings online: register on the {settings.brand_name} portal with your member number, "
+                  "ID number and date of birth — a one-time code is sent to this email address.", link="/register")
+
+
+def notify_member_bank_changed(db: Session, member, addresses: list[str]) -> None:
+    """Sent to the current and any previous email: a fraud control on bank-detail changes."""
+    body = (f"Dear {member.first_name}, the bank account for your pension payments (member {member.account_code}) was changed. "
+            f"If you did not ask for this, contact {settings.brand_administrator} straight away.")
+    for address in dict.fromkeys(a for a in addresses if a):
+        db.add(NotificationOutbox(
+            event="member.bank_changed", channel=NotificationChannel.email, recipient_user_id=member.portal_user_id,
+            recipient_address=address, subject="Your bank details were changed", body=body, entity_type="member",
+            entity_id=str(member.id),
+        ))
+    if member.portal_user_id:
+        db.add(UserNotification(user_id=member.portal_user_id, event="member.bank_changed", title="Your bank details were changed",
+                                body=body, link=f"/member/{member.id}/details", entity_type="member", entity_id=str(member.id)))
+
+
+def notify_member_statement_ready(db: Session, member, as_at) -> None:
+    title = f"Your benefit statement as at {as_at:%d %B %Y} is ready"
+    body = f"Dear {member.first_name}, your benefit statement as at {as_at:%d %B %Y} is ready. Sign in to view or download it."
+    _email_member(db, member, "member.statement_ready", title, body, link=f"/member/{member.id}/statements")
+    if member.portal_user_id:
+        db.add(UserNotification(user_id=member.portal_user_id, event="member.statement_ready", title=title, body=body,
+                                link=f"/member/{member.id}/statements", entity_type="member", entity_id=str(member.id)))
+

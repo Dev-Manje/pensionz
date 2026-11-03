@@ -87,12 +87,18 @@ function NominationTable({ n, sensitive }: { n: Nomination; sensitive: boolean }
   );
 }
 
-function NominationDialog({ member, current, onClose }: { member: Member; current: Nomination | null; onClose: () => void }) {
+type NominationBody = Parameters<typeof proposeNomination>[1];
+
+// Also used by the member portal: `onSend` replaces the staff proposal and `memberName` the record's name.
+export function NominationDialog({ member, memberName, current, onClose, onSend, intro }: {
+  member?: Member; memberName?: string; current: Pick<Nomination, "beneficiaries"> | null; onClose: () => void;
+  onSend?: (body: NominationBody) => Promise<unknown>; intro?: string;
+}) {
   const feedback = useFeedback();
   const narrow = useMediaQuery(useTheme().breakpoints.down("sm"));
   const relationships = useListRows("relationships");
   const options = (relationships.data ?? []).filter((r) => r.active !== false);
-  const submit = useMemberProposal((body: Parameters<typeof proposeNomination>[1]) => proposeNomination(member.id, body));
+  const submit = useMemberProposal((body: NominationBody) => proposeNomination(member?.id ?? "", body));
   const [signed, setSigned] = useState(todayIso());
   const [note, setNote] = useState("");
   const [rows, setRows] = useState<BeneficiaryInput[]>(() =>
@@ -117,8 +123,9 @@ function NominationDialog({ member, current, onClose }: { member: Member; curren
   async function send() {
     setError(null);
     try {
-      await submit.mutateAsync({ signed_date: signed, note: note.trim() || null, beneficiaries: rows.map((r) => ({ ...r, share_pct: r.share_pct || "0" })) });
-      feedback.success("Nomination sent for approval — it replaces the current one once a member checker approves it.");
+      const body = { signed_date: signed, note: note.trim() || null, beneficiaries: rows.map((r) => ({ ...r, share_pct: r.share_pct || "0" })) };
+      await (onSend ? onSend(body) : submit.mutateAsync(body));
+      if (!onSend) feedback.success("Nomination sent for approval — it replaces the current one once a member checker approves it.");
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
@@ -127,11 +134,11 @@ function NominationDialog({ member, current, onClose }: { member: Member; curren
 
   return (
     <Dialog open onClose={onClose} fullWidth maxWidth="md" fullScreen={narrow}>
-      <DialogTitle>New beneficiary nomination for {String(member.fields.full_name)}</DialogTitle>
+      <DialogTitle>New beneficiary nomination for {memberName ?? String(member?.fields.full_name ?? "")}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           <Typography color="text.secondary">
-            Capture the nomination form as the member signed it. It replaces the current nomination, which is kept in the history. The trustees decide who is paid
+            {intro ?? "Capture the nomination form as the member signed it."} It replaces the current nomination, which is kept in the history. The trustees decide who is paid
             on death; the nomination guides them.
           </Typography>
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 2fr" }, gap: 2 }}>

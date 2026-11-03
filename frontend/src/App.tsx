@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
 import { LoginPage } from "./auth/LoginPage";
 import { ForgotPasswordPage } from "./auth/ForgotPasswordPage";
+import { RegisterMemberPage } from "./auth/RegisterMemberPage";
 import { ResetPasswordPage } from "./auth/ResetPasswordPage";
 import { RoleRouter, canOpen } from "./routes/RoleRouter";
 import { LoadingState } from "./components/LoadingState";
@@ -61,6 +62,7 @@ function Shell() {
       {/* Open whether or not someone is signed in: an emailed link can be opened anywhere. */}
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/register" element={<RegisterMemberPage />} />
       <Route path="/*" element={<RequireAuth />} />
     </Routes>
   );

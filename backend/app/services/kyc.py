@@ -96,7 +96,11 @@ def can_edit(user: User, app: KycApplication) -> bool:
 
 def applicant_link(app: KycApplication) -> str:
     """Where the applicant opens the application: the portal for officers, the KYC screen for staff."""
-    return f"/po/kyc/{app.id}" if app.applicant_user_id and app.client_type != ClientType.individual else f"/kyc/{app.id}"
+    if app.applicant_user_id and app.client_type != ClientType.individual:
+        return f"/po/kyc/{app.id}"
+    if app.applicant_user_id:  # a member's own KYC from the member portal
+        return f"/member/kyc/{app.id}"
+    return f"/kyc/{app.id}"
 
 
 def _require_edit(user: User, app: KycApplication) -> None:
@@ -120,7 +124,9 @@ def _reference(db: Session) -> str:
 
 def create(db: Session, user: User, client_type: ClientType, data: dict | None = None) -> KycApplication:
     portal = not user.has_any_role(*CAPTURE_ROLES)
-    if portal and not user.has_role(APPLICANT_ROLES[client_type]):
+    # Members apply as individuals too (their own KYC from the member portal).
+    allowed = {APPLICANT_ROLES[client_type]} | ({UserRole.member} if client_type == ClientType.individual else set())
+    if portal and not user.has_any_role(*allowed):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "You can't start this kind of application")
     data = data or {}
     app = KycApplication(
@@ -480,6 +486,34 @@ def start_for_scheme(db: Session, user: User, scheme: Scheme) -> KycApplication:
         carried += 1
     audit.record(db, user.id, "kyc_application", app.id, "created",
                  after={"reference": app.reference, "scheme_id": scheme.id, "change_of": base.reference if base else None,
+                        "documents_carried_over": carried})
+    db.commit()
+    db.refresh(app)
+    return app
+
+
+def start_change_for_party(db: Session, user: User, party: Party) -> KycApplication:
+    """A portal applicant (a member) changes their own approved KYC: the last
+    approved answers prefilled, accepted documents carried over pending review."""
+    base = db.get(KycApplication, party.latest_application_id) if party.latest_application_id else None
+    data = copy.deepcopy(base.data) if base else {}
+    app = KycApplication(reference=_reference(db), client_type=party.client_type, data=data,
+                         display_name=kyc_forms.display_name(party.client_type, data), applicant_user_id=user.id, party_id=party.id)
+    db.add(app)
+    db.flush()
+    carried = 0
+    for doc in current_documents(base) if base else []:
+        if doc.review_status != DocumentReview.accepted:
+            continue
+        db.add(KycDocument(
+            application_id=app.id, requirement=doc.requirement, doc_type=doc.doc_type, doc_type_other=doc.doc_type_other,
+            issue_date=doc.issue_date, expiry_date=doc.expiry_date, storage_key=doc.storage_key, filename=doc.filename,
+            content_type=doc.content_type, size_bytes=doc.size_bytes, sha256=doc.sha256,
+            uploaded_by_user_id=doc.uploaded_by_user_id, uploaded_at=doc.uploaded_at,
+        ))
+        carried += 1
+    audit.record(db, user.id, "kyc_application", app.id, "created",
+                 after={"reference": app.reference, "party_id": party.id, "change_of": base.reference if base else None,
                         "documents_carried_over": carried})
     db.commit()
     db.refresh(app)

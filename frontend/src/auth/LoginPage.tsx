@@ -73,7 +73,11 @@ export function LoginPage() {
         Forgot your password?
       </Link>
       <Typography variant="caption" color="text.secondary" sx={{ textAlign: "center" }}>
-        No account yet? Your employer's principal officer or {BRAND.administrator} will send you an invitation.
+        Fund member without a login?{" "}
+        <Link component={RouterLink} to="/register">
+          Register with your member number
+        </Link>
+        . Employers' officers are invited by {BRAND.administrator}.
       </Typography>
     </AuthLayout>
   );

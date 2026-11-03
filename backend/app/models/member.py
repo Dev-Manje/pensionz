@@ -118,6 +118,9 @@ class Member(UUIDPKMixin, TimestampMixin, Base):
     exit_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     date_of_death: Mapped[date | None] = mapped_column(Date, nullable=True)
 
+    # Member portal login (FR-PRT-006). One login may hold memberships in several funds.
+    portal_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=True, index=True)
+
     # Regulatory Authority Data tab: free key/value pairs until the regulator's field list is known.
     regulatory_data: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
 

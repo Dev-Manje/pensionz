@@ -1,0 +1,66 @@
+import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
+import Alert from "@mui/material/Alert";
+import Breadcrumbs from "@mui/material/Breadcrumbs";
+import Link from "@mui/material/Link";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import { useQueryClient } from "@tanstack/react-query";
+import { BRAND } from "../../brand";
+import { LoadingState } from "../../components/LoadingState";
+import { StatusChip } from "../../components/StatusChip";
+import { useKyc } from "../../queries/kyc";
+import { formatDateTime } from "../../utils/date";
+import { KycDocuments } from "../staff/kyc/KycDocuments";
+import { KycForm } from "../staff/kyc/KycForm";
+import { KycAnswers } from "../staff/kyc/KycReview";
+import { KYC_STATUS_TEXT } from "../po/poLabels";
+
+// A member's own KYC (change of details / new documents) in the member portal:
+// the staff stepper while it's a draft or returned, read-only once sent.
+export function MemberKycPage() {
+  const { applicationId } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const query = useKyc(applicationId);
+  if (query.isLoading) return <LoadingState />;
+  if (query.error || !query.data) return <Alert severity="error">{query.error?.message ?? "Application not found"}</Alert>;
+  const app = query.data;
+  const status = KYC_STATUS_TEXT[app.status];
+  return (
+    <Stack spacing={2} sx={{ maxWidth: 1040 }}>
+      <Breadcrumbs>
+        <Link component={RouterLink} to="/member" underline="hover" color="inherit">My pension</Link>
+        <Typography color="text.primary">{app.reference}</Typography>
+      </Breadcrumbs>
+      <div>
+        <Typography variant="h1">{app.is_change ? "Update my KYC" : "My KYC"}</Typography>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center", mt: 0.5 }}>
+          <Typography color="text.secondary">{app.reference}</Typography>
+          <StatusChip status={app.status} label={status.label} tone={status.tone} />
+        </Stack>
+      </div>
+      {app.can_edit ? (
+        <KycForm
+          key={app.id}
+          app={app}
+          onSubmitted={() => {
+            queryClient.invalidateQueries({ queryKey: ["my"] });
+            navigate("/member");
+          }}
+        />
+      ) : (
+        <>
+          {["submitted", "in_review", "awaiting_senior_approval"].includes(app.status) && (
+            <Alert severity="info">
+              Sent {app.submitted_at ? formatDateTime(app.submitted_at) : ""}. {BRAND.administrator} checks the details and documents and tells you by email.
+            </Alert>
+          )}
+          {app.status === "approved" && <Alert severity="success">Approved {app.decided_at ? formatDateTime(app.decided_at) : ""}.</Alert>}
+          {app.status === "rejected" && <Alert severity="error">Not approved: {app.decision_reason}</Alert>}
+          <KycDocuments app={app} mode="view" />
+          <KycAnswers app={app} />
+        </>
+      )}
+    </Stack>
+  );
+}

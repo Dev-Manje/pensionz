@@ -30,6 +30,7 @@ import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import PaymentsOutlinedIcon from "@mui/icons-material/PaymentsOutlined";
 import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
+import ManageSearchIcon from "@mui/icons-material/ManageSearch";
 import { useAuth } from "../auth/AuthContext";
 import { RouteErrorBoundary } from "../components/RouteErrorBoundary";
 import { NotificationBell } from "../components/notifications/NotificationBell";
@@ -46,7 +47,8 @@ import { KycPage } from "./staff/kyc/KycPage";
 import { MembersPage } from "./staff/members/MembersPage";
 import { ContributionsPage } from "./staff/contributions/ContributionsPage";
 import { OnboardingPage } from "./staff/onboarding/OnboardingPage";
-import { MemberHome } from "./member/MemberHome";
+import { EnquiriesPage } from "./staff/enquiries/EnquiriesPage";
+import { MemberPortal } from "./member/MemberPortal";
 import { PoPortal } from "./po/PoPortal";
 import { ROLE_LABELS, STAFF_ROLES } from "../api/types";
 import { BRAND } from "../brand";
@@ -73,12 +75,13 @@ const PORTAL_PATHS = ["member", "po"];
 // Later phases add funds, employers, members, contributions, bonus, claims,
 // payments, accounting and reports here (pz-frontend-architecture).
 const SECTIONS: Section[] = [
-  { path: "member", label: "My pension", icon: <SavingsOutlinedIcon />, roles: ["member", "individual"], element: <MemberHome /> },
+  { path: "member", label: "My pension", icon: <SavingsOutlinedIcon />, roles: ["member", "individual"], element: <MemberPortal /> },
   { path: "po", label: "My schemes", icon: <BusinessOutlinedIcon />, roles: ["principal_officer"], element: <PoPortal /> },
   { path: "home", label: "Home", icon: <HomeOutlinedIcon />, roles: STAFF_ROLES, element: <StaffHome /> },
   { path: "approvals", label: "Approvals", icon: <CheckCircleOutlineIcon />, roles: STAFF_ROLES, element: <ApprovalsPage /> },
   { path: "kyc", label: "KYC", icon: <FactCheckOutlinedIcon />, roles: ["compliance", "relationship_manager", "member_admin", "admin", "auditor"], element: <KycPage /> },
   { path: "members", label: "Members", icon: <GroupsOutlinedIcon />, roles: STAFF_ROLES, element: <MembersPage /> },
+  { path: "enquiries", label: "Enquiries", icon: <ManageSearchIcon />, roles: STAFF_ROLES, element: <EnquiriesPage /> },
   { path: "contributions", label: "Contributions", icon: <PaymentsOutlinedIcon />, roles: STAFF_ROLES, element: <ContributionsPage /> },
   { path: "onboarding", label: "Onboarding", icon: <BadgeOutlinedIcon />, roles: ["scheme_config_maker", "scheme_config_checker", "admin", "auditor", "relationship_manager", "compliance"], element: <OnboardingPage /> },
   { path: "funds", label: "Funds", icon: <AccountBalanceOutlinedIcon />, roles: STAFF_ROLES, element: <FundsPage /> },
