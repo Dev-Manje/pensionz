@@ -1,5 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getDashboard, getOrganisation, getPayment, getPortalSchedule, getRemittances, listMySchemes } from "../api/po";
+import {
+  getDashboard, getOrganisation, getPayment, getPortalImport, getPortalMember, getPortalRequest, getPortalSchedule, getRemittances, listMySchemes,
+  listPortalCategories, listPortalMembers, listPortalRequests,
+} from "../api/po";
 import type { Schedule } from "../api/schedules";
 
 export const poKeys = {
@@ -45,6 +48,43 @@ export function usePortalScheduleChange<A>(id: string, fn: (args: A) => Promise<
       qc.setQueryData(poKeys.schedule(id), data);
       qc.invalidateQueries({ queryKey: ["po", "remittances"] });
       qc.invalidateQueries({ queryKey: poKeys.dashboard });
+    },
+  });
+}
+
+export function usePortalMembers(schemeId: string, q: string, currentOnly: boolean) {
+  return useQuery({ queryKey: ["po", "members", schemeId, q, currentOnly], queryFn: () => listPortalMembers(schemeId, q, currentOnly) });
+}
+
+export function usePortalCategories(schemeId: string) {
+  return useQuery({ queryKey: ["po", "categories", schemeId], queryFn: () => listPortalCategories(schemeId), staleTime: 5 * 60_000 });
+}
+
+export function usePortalMember(id: string | undefined) {
+  return useQuery({ queryKey: ["po", "member", id], queryFn: () => getPortalMember(id!), enabled: !!id });
+}
+
+export function usePortalRequests(schemeId: string) {
+  return useQuery({ queryKey: ["po", "requests", schemeId], queryFn: () => listPortalRequests(schemeId) });
+}
+
+export function usePortalRequest(id: string | undefined) {
+  return useQuery({ queryKey: ["po", "request", id], queryFn: () => getPortalRequest(id!), enabled: !!id });
+}
+
+export function usePortalImport(id: string | undefined) {
+  return useQuery({ queryKey: ["po", "import", id], queryFn: () => getPortalImport(id!), enabled: !!id });
+}
+
+// After a member request: refresh members, requests and the member page.
+export function usePortalMemberRequest<A>(fn: (args: A) => Promise<unknown>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["po", "members"] });
+      qc.invalidateQueries({ queryKey: ["po", "member"] });
+      qc.invalidateQueries({ queryKey: ["po", "requests"] });
     },
   });
 }

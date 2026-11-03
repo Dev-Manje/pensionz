@@ -174,7 +174,7 @@ def dashboard(db: Session, user: User, as_at: date) -> dict:
     }
 
 
-# ---- organisation details & KYC (FR-PRT-002) -------------------------------------------
+# ---- organisation details & KYC (FR-PRT-001) -------------------------------------------
 
 REVIEW_SOON_DAYS = 60
 DETAIL_FIELDS = (

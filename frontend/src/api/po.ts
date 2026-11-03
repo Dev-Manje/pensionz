@@ -1,7 +1,10 @@
 import { apiFetch, downloadFile, openFile } from "./client";
 import type { Schedule, ScheduleLineInput } from "./schedules";
 import type { PaymentMethod } from "./receipts";
-import type { KycApplication, Organisation, PaymentDetail, PoDashboard, PortalScheme, RemittanceMonth } from "./types";
+import type {
+  KycApplication, MemberImport, NewMemberInput, Organisation, PaymentDetail, PoDashboard, PortalMember, PortalMemberDetail, PortalRequest, PortalScheme,
+  RemittanceMonth,
+} from "./types";
 
 // Principal officer portal (/po). The server returns only the employers the
 // signed-in officer is linked to — possibly several, in several funds.
@@ -80,3 +83,39 @@ export function uploadPaymentProof(id: string, file: File) {
 
 export const viewPaymentProof = (id: string) => openFile(`/po/remittances/${id}/proof`);
 export const openPaymentDocument = (id: string) => openFile(`/po/remittances/${id}/document`);
+
+// ---- members: HR-level list, requests a member checker approves
+
+export function listPortalMembers(schemeId: string, q: string, currentOnly: boolean) {
+  const params = new URLSearchParams({ current_only: String(currentOnly) });
+  if (q.trim()) params.set("q", q.trim());
+  return apiFetch<PortalMember[]>(`/po/schemes/${schemeId}/members?${params}`);
+}
+
+export const listPortalCategories = (schemeId: string) =>
+  apiFetch<{ id: string; code: string; name: string }[]>(`/po/schemes/${schemeId}/categories`);
+export const getPortalMember = (id: string) => apiFetch<PortalMemberDetail>(`/po/members/${id}`);
+
+const post = <T,>(path: string, body: unknown) => apiFetch<T>(path, { method: "POST", body: JSON.stringify(body) });
+
+export const applyNewMember = (schemeId: string, body: NewMemberInput) => post<PortalRequest>(`/po/schemes/${schemeId}/members`, body);
+export const requestSalaryChange = (memberId: string, body: { effective_from: string; basic_salary: string; pensionable_salary: string | null; note: string | null }) =>
+  post<PortalRequest>(`/po/members/${memberId}/salary`, body);
+export const sendExitNotice = (memberId: string, body: { last_day: string; reason: string; note: string | null }) =>
+  post<PortalRequest>(`/po/members/${memberId}/exit`, body);
+
+export const listPortalRequests = (schemeId: string) => apiFetch<PortalRequest[]>(`/po/schemes/${schemeId}/requests`);
+export const getPortalRequest = (id: string) => apiFetch<PortalRequest>(`/po/requests/${id}`);
+
+export const downloadMemberTemplate = (schemeId: string) => downloadFile(`/po/schemes/${schemeId}/members/import-template`, "members.xlsx");
+export const openApplicationForm = (schemeId: string) => openFile(`/po/schemes/${schemeId}/members/application-form`);
+
+export function uploadMemberList(schemeId: string, file: File) {
+  const form = new FormData();
+  form.append("file", file);
+  return apiFetch<MemberImport>(`/po/schemes/${schemeId}/members/imports`, { method: "POST", body: form });
+}
+
+export const getPortalImport = (id: string) => apiFetch<MemberImport>(`/po/member-imports/${id}`);
+export const downloadImportErrors = (id: string) => downloadFile(`/po/member-imports/${id}/errors`, "member-upload-errors.xlsx");
+export const submitPortalImport = (id: string) => apiFetch<PortalRequest>(`/po/member-imports/${id}/submit`, { method: "POST" });

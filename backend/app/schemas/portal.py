@@ -2,10 +2,12 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 from app.models.contribution import PaymentMethod, ReceiptStatus, ScheduleStatus
+from app.models.approval import ApprovalStatus
 from app.models.kyc import ApplicationStatus
+from app.models.member import MemberStatus
 from app.models.scheme import BillingFrequency, SchemeStatus
 
 
@@ -206,3 +208,88 @@ class NoticeIn(BaseModel):
     contribution_month: date | None = None
     notes: str | None = Field(None, max_length=2000)
     code: str = Field(..., pattern=r"^\s*\d{6}\s*$")
+
+
+# ---- members (HR-level only)
+
+
+class PortalMemberOut(BaseModel):
+    id: uuid.UUID
+    account_code: str
+    employee_no: str | None
+    full_name: str
+    gender: str
+    date_of_birth: date
+    category: str | None
+    status: MemberStatus
+    status_label: str
+    status_effective: date | None
+    date_joined_fund: date
+    date_joined_employer: date | None
+    # Pensionable salary on record today.
+    salary: Decimal | None
+    salary_from: date | None
+    has_pending_request: bool
+
+
+class PortalRequestOut(BaseModel):
+    id: uuid.UUID
+    kind: str
+    kind_label: str
+    summary: str
+    status: ApprovalStatus
+    created_at: datetime
+    decided_at: datetime | None
+    comment: str | None
+    member_id: uuid.UUID | None
+    requested_by: str | None
+
+
+class PortalSalaryOut(BaseModel):
+    effective_from: date
+    basic_salary: Decimal
+    pensionable_salary: Decimal
+
+
+class PortalMemberDetailOut(PortalMemberOut):
+    scheme_id: uuid.UUID
+    scheme_name: str
+    salaries: list[PortalSalaryOut]
+    requests: list[PortalRequestOut]
+    can_change_salary: bool
+    can_give_notice: bool
+
+
+class PortalCategoryOut(BaseModel):
+    id: uuid.UUID
+    code: str
+    name: str
+
+
+class NewMemberIn(BaseModel):
+    """What an employer knows about a new employee joining the scheme."""
+
+    first_name: str = Field(min_length=1, max_length=80)
+    other_names: str | None = Field(None, max_length=120)
+    last_name: str = Field(min_length=1, max_length=80)
+    gender: str
+    date_of_birth: date
+    nationality: str | None = Field(None, min_length=2, max_length=2)
+    id_type: str | None = Field(None, max_length=20)
+    id_number: str | None = Field(None, max_length=40)
+    employee_no: str | None = Field(None, max_length=30)
+    category_id: uuid.UUID
+    date_joined_employer: date
+    date_joined_fund: date
+    mobile: str | None = Field(None, max_length=40)
+    email: EmailStr | None = None
+    physical_address: str | None = Field(None, max_length=200)
+    basic_salary: Decimal = Field(gt=0, max_digits=18, decimal_places=2)
+
+
+class ExitNoticeIn(BaseModel):
+    # Last working day, or the date of death.
+    last_day: date
+    # resigned | dismissed | retrenched | contract_ended | retired | ill_health | died | other
+    reason: str
+    note: str | None = Field(None, max_length=1000)

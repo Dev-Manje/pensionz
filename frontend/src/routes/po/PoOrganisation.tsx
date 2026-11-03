@@ -94,7 +94,7 @@ function History({ rows }: { rows: PortalKycApplication[] }) {
   );
 }
 
-// The employer as a client (FR-PRT-002): its approved KYC details and documents,
+// The employer as a client (FR-PRT-001): its approved KYC details and documents,
 // when the next review is due, and changes — every change goes through
 // compliance as a KYC application prefilled from the approved details.
 export function PoOrganisation({ schemeId }: { schemeId: string }) {

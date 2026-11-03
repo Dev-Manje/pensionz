@@ -109,8 +109,11 @@ def notify_approval_decided(db: Session, maker: User, summary: str, approved: bo
                             request_id: uuid.UUID) -> None:
     outcome = "approved" if approved else "rejected"
     body = f"{summary} — {outcome}." + (f" Comment: {comment}" if comment else "")
+    # Principal officers follow their requests in the portal, not on the staff approvals screen.
+    portal_only = not maker.is_staff and maker.has_role(UserRole.principal_officer)
     _notify(db, maker, f"approval.{outcome}", f"Request {outcome}", body,
-            link=f"/approvals/{request_id}", entity_type="approval_request", entity_id=request_id)
+            link=f"/po/requests/{request_id}" if portal_only else f"/approvals/{request_id}",
+            entity_type="approval_request", entity_id=request_id)
 
 
 # --- KYC ----------------------------------------------------------------------

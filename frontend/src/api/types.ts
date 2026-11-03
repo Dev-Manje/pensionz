@@ -990,7 +990,7 @@ export interface MemberImport extends MemberImportSummary {
   can_submit: boolean;
 }
 
-// ---- Principal officer portal: the employer's organisation details & KYC (FR-PRT-002)
+// ---- Principal officer portal: the employer's organisation details & KYC (FR-PRT-001)
 
 export interface PortalKycApplication {
   id: string;
@@ -1075,4 +1075,65 @@ export interface PaymentDetail extends Payment {
   can_add_proof: boolean;
   document_kind: "receipt" | "acknowledgement" | null;
   schedules: RemittanceSchedule[];
+}
+
+// ---- Principal officer portal: members (HR-level facts only) and requests
+
+export interface PortalMember {
+  id: string;
+  account_code: string;
+  employee_no: string | null;
+  full_name: string;
+  gender: string;
+  date_of_birth: string;
+  category: string | null;
+  status: MemberStatus;
+  status_label: string;
+  status_effective: string | null;
+  date_joined_fund: string;
+  date_joined_employer: string | null;
+  salary: string | null;
+  salary_from: string | null;
+  has_pending_request: boolean;
+}
+
+export interface PortalRequest {
+  id: string;
+  kind: string;
+  kind_label: string;
+  summary: string;
+  status: "pending" | "approved" | "rejected" | "withdrawn";
+  created_at: string;
+  decided_at: string | null;
+  comment: string | null;
+  member_id: string | null;
+  requested_by: string | null;
+}
+
+export interface PortalMemberDetail extends PortalMember {
+  scheme_id: string;
+  scheme_name: string;
+  salaries: { effective_from: string; basic_salary: string; pensionable_salary: string }[];
+  requests: PortalRequest[];
+  can_change_salary: boolean;
+  can_give_notice: boolean;
+}
+
+export interface NewMemberInput {
+  first_name: string;
+  other_names: string | null;
+  last_name: string;
+  gender: string;
+  date_of_birth: string;
+  nationality: string | null;
+  id_type: string | null;
+  id_number: string | null;
+  employee_no: string | null;
+  category_id: string;
+  date_joined_employer: string;
+  date_joined_fund: string;
+  mobile: string | null;
+  email: string | null;
+  physical_address: string | null;
+  basic_salary: string;
 }

@@ -318,7 +318,7 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       next step; arrears totals (overdue months, oldest, interest); activity feed (90 days, 12 items) across all the
       officer's employers. pytest 12 new (`test_po_dashboard.py`), vitest 2, curl incl. 403, screenshots 1440/820/390
       viewed. Follow-up: links from the cards/activity to remittance pages once those exist (next tasks).
-- [x] Organisation KYC from the portal (reuse Phase 2 forms) and change requests. FR-PRT-002 — done 2026-11-02, see
+- [x] Organisation KYC from the portal (reuse Phase 2 forms) and change requests. FR-PRT-001 — done 2026-11-02, see
       `kyc.start_for_scheme`, `portal.organisation`, `POST /po/schemes/{id}/kyc`, `routes/po/PoOrganisation.tsx`,
       `PoKycPage.tsx` (same stepper as staff): employer page `/po/schemes/<id>` with an "Organisation & KYC" tab —
       approved details, directors, documents with expiry, review due date, history; first KYC or "Change details"
@@ -337,8 +337,17 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       needs an emailed one-time code (purpose `remit`, checked after the request is valid); sent schedule → ready in the
       contributions queue + bell to contributions officers; notice → proof upload, acknowledgement/receipt PDF; dashboard
       cards and activity link to these pages. pytest 7 new, vitest 1, live smoke 13/13, screenshots 1440/390 viewed.
-- [ ] Members: list (HR-level fields only), new member application + bulk upload, salary updates,
-      exit notifications (start claim).
+- [x] Members: list (HR-level fields only), new member application + bulk upload, salary updates,
+      exit notifications (start claim). FR-PRT-001, FR-PRT-005 — done 2026-11-03, see `services/portal_members.py`,
+      `api/v1/po_members.py`, `routes/po/PoMembers.tsx`, `PoMemberPage.tsx`, `PoImportPage.tsx`, `PoRequests.tsx`:
+      employer tabs "Members" (search, former members, salary on record, "change waiting") and "Requests" (everything sent
+      from the portal for the employer in the last year, with the checker's note); new member with first salary
+      (`members.propose_new(first_salary=…)` records it on approval), bulk upload through the Phase 3 import (template,
+      row errors, errors workbook, send valid rows), printable application form, salary change, exit notice (reason +
+      last day → inactive, death → deceased) — all member-checker approvals tagged `_scheme_id` / "Requested from:
+      Employer portal"; decision emails link to `/po/requests/<id>`. No ID, bank, contact or balance fields in the
+      portal. pytest 7 new, live smoke 13/13, screenshots 1440/390 viewed (import page covered by pytest only).
+      Follow-up (Phase 8): an approved exit notice starts the withdrawal / retirement / death claim (`_exit_reason`).
 - [ ] Statements of contributions / invoices / arrears download.
 - [ ] Notifications to POs: schedule due, received/rejected, arrears. FR-NOT-003
 

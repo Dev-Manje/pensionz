@@ -483,7 +483,7 @@ used_at).
 - Frontend `/po`: summary alert (employers late this month, total arrears), one card per employer grouped by fund with a
   remittance panel (plain-language stage + what happens next, `routes/po/poLabels.ts`) and an arrears panel; activity list.
 
-### Organisation KYC from the portal (FR-PRT-002) — 2026-11-02
+### Organisation KYC from the portal (FR-PRT-001) — 2026-11-02
 
 - `kyc_application.scheme_id` (migration `e4b7c2d91a36`): an application made from the portal for an employer. Every
   principal officer linked to that employer can see and edit it (`kyc.acts_for`); other officers get 404.
@@ -520,3 +520,16 @@ used_at).
 - `GET /po/schemes/{id}/remittances`: months newest first (last 24 + the month now due + payments without a month),
   stage as on the dashboard, `schedule_total` = sent schedules only, `paid` (confirmed), `noted` (pending).
 - Dashboard activity items carry a portal `link`; the remittance card links to the month's schedule.
+
+### Members from the portal (FR-PRT-001, FR-PRT-005) — 2026-11-03
+
+- `services/portal_members.py` + `api/v1/po_members.py`. HR-level facts only: account code, employee number, name,
+  gender, date of birth, category, status, join dates, pensionable salary on record — never ID, bank, contact,
+  beneficiary or balance details.
+- Requests reuse the staff proposals (same checks, member checker approves): new member (`members.propose_new` with
+  `first_salary`, recorded on approval from the employer join date), salary change (`propose_salary`), exit notice
+  (`propose_status`: reason + last working day → inactive, died → deceased; `_exit_reason` kept for the Phase 8 claim),
+  bulk upload (`io/member_import`, only the uploader sends it). Each is tagged `_scheme_id` and "Requested from:
+  Employer portal (principal officer)" for the checker.
+- `GET /po/schemes/{id}/requests` / `GET /po/requests/{id}`: portal requests for the employer (last year) with status,
+  checker's comment and the member. `notify_approval_decided` links portal-only makers to `/po/requests/<id>`.

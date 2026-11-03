@@ -428,7 +428,7 @@ def possible_duplicates(db: Session, app: KycApplication) -> list[Party]:
     ).scalars())
 
 
-# ---- principal officer portal: the employer's own KYC and changes to it (FR-PRT-002)
+# ---- principal officer portal: the employer's own KYC and changes to it (FR-PRT-001)
 
 OPEN = (ApplicationStatus.draft, ApplicationStatus.submitted, ApplicationStatus.in_review, ApplicationStatus.returned,
         ApplicationStatus.awaiting_senior_approval)

@@ -9,7 +9,7 @@ export const STAGE_TEXT: Record<RemittanceStage, { label: string; tone: StatusTo
   awaiting_allocation: {
     label: "Being processed",
     tone: "info",
-    next: "Your pension administrator is matching the schedule to the money — usually within 5 working days.",
+    next: "Your pension administrator is matching the schedule to the money and will credit the members.",
   },
   allocated: { label: "Done — members credited", tone: "success", next: "Nothing more to do for this month." },
 };
@@ -72,3 +72,22 @@ export function recentMonths(today: Date, count = 13): string[] {
   }
   return out;
 }
+
+// A request (new member, salary change, exit notice, bulk upload) in the officer's words.
+export const REQUEST_TEXT: Record<"pending" | "approved" | "rejected" | "withdrawn", { label: string; tone: StatusTone }> = {
+  pending: { label: "Waiting for approval", tone: "info" },
+  approved: { label: "Approved", tone: "success" },
+  rejected: { label: "Not approved", tone: "error" },
+  withdrawn: { label: "Withdrawn", tone: "default" },
+};
+
+export const EXIT_REASONS: [string, string][] = [
+  ["resigned", "Resigned"],
+  ["dismissed", "Dismissed"],
+  ["retrenched", "Retrenched / redundant"],
+  ["contract_ended", "Contract ended"],
+  ["retired", "Retired"],
+  ["ill_health", "Left because of ill health"],
+  ["died", "Died"],
+  ["other", "Other (say why)"],
+];

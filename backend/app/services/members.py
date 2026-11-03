@@ -13,6 +13,7 @@ duplicates found across all funds (FR-MEM-011)."""
 import re
 import uuid
 from datetime import date, timedelta
+from decimal import Decimal
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, or_, select
@@ -23,7 +24,7 @@ from app.models.category import BenefitCategory, CategoryStatus
 from app.models.fund import Fund, FundStatus, FundType
 from app.models.identity import User, UserRole
 from app.models.kyc import ClientType, DocumentReview, KycApplication, KycDocument, Party
-from app.models.member import AssignmentReason, Member, MemberAssignment, MemberStatus, MemberStatusChange
+from app.models.member import AssignmentReason, Member, MemberAssignment, MemberSalary, MemberStatus, MemberStatusChange
 from app.models.reference import Bank, BankBranch, Country, District, ReferenceItem, ReferenceList, TraditionalAuthority, Village
 from app.models.scheme import Scheme, SchemeStatus
 from app.schemas.member import MemberCreateIn, MemberDetailsIn, MoveIn, StatusChangeIn
@@ -375,7 +376,8 @@ def _check_account_code(db: Session, fund: Fund, code: str) -> None:
 # ---- proposals
 
 
-def propose_new(db: Session, maker: User, fund: Fund, data: MemberCreateIn) -> ApprovalRequest:
+def propose_new(db: Session, maker: User, fund: Fund, data: MemberCreateIn, *, first_salary: Decimal | None = None) -> ApprovalRequest:
+    """`first_salary` (basic = pensionable, from the employer join date) is recorded with the member on approval."""
     if fund.status != FundStatus.active:
         raise _bad("This fund isn't taking new members (it is closed to new members or wound up)")
     d = {k: v for k, v in data.model_dump().items() if k in DETAIL_FIELDS}
@@ -393,6 +395,11 @@ def propose_new(db: Session, maker: User, fund: Fund, data: MemberCreateIn) -> A
         "possible_duplicates": _duplicate_lines(dups) or None,
         "_values": values, "_account_code": data.account_code,
     }
+    if first_salary is not None:
+        if first_salary <= 0:
+            raise _bad("The salary must be more than zero")
+        payload["first_salary"] = f"MWK {first_salary:,.2f}"
+        payload["_first_salary"] = str(first_salary)
     request = approvals.submit(
         db, maker, KIND_NEW, entity_type="member", entity_id=None,
         summary=f"New member {data.first_name} {data.last_name} in fund {fund.code}" + (" — possible duplicate" if dups else ""),
@@ -534,6 +541,11 @@ def _apply_new(db: Session, request: ApprovalRequest, checker: User) -> None:
     _check_employment(db, fund, scheme_id, category_id, d["date_joined_fund"], d["date_of_birth"], new=True)
     member = create_member(db, fund, d, scheme_id, category_id, request.payload.get("_account_code"), checker, request)
     request.entity_id = str(member.id)
+    if request.payload.get("_first_salary"):
+        amount = Decimal(request.payload["_first_salary"])
+        db.add(MemberSalary(member_id=member.id, effective_from=d.get("date_joined_employer") or d["date_joined_fund"], basic_salary=amount,
+                            pensionable_salary=amount, note="Given with the application", approved_by_user_id=checker.id,
+                            approval_request_id=request.id))
 
 
 def create_member(db: Session, fund: Fund, d: dict, scheme_id, category_id, code: str | None, checker: User,

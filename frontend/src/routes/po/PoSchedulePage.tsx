@@ -130,8 +130,7 @@ export function PoSchedulePage() {
       )}
       {s.status === "ready" && (
         <Alert severity="info">
-          Sent {s.submitted_at ? formatDateTime(s.submitted_at) : ""}. Next, {BRAND.administrator} matches it to your payment and credits the members —
-          usually within 5 working days.
+          Sent {s.submitted_at ? formatDateTime(s.submitted_at) : ""}. Next, {BRAND.administrator} matches it to your payment and credits the members.
         </Alert>
       )}
       {s.status === "allocated" && <Alert severity="success">Done — the contributions have been credited to the members.</Alert>}
