@@ -1,6 +1,6 @@
 # Pensionz — UAT server guide
 
-User acceptance testing of Phases 0–5. This page covers installing the UAT server, the logins, and the
+User acceptance testing of Phases 0–7 (the Phase 0–5 features can be tried now; bonus and the member portal follow). This page covers installing the UAT server, the logins, and the
 sample data testers will find. Everything in the data set is **invented**: no real people, employers or funds.
 
 ## 1a. Run UAT on the development machine (current set-up)

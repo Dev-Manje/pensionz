@@ -366,36 +366,10 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       cancelled by staff, allocation reversed; payment confirmed / not confirmed and credited (Phase 4) now link into the
       portal. pytest 4 new, job run on dev (2 reminders by email, second run skipped), inbox screenshot viewed.
 
-## UAT checkpoint — Phases 0–5 (user acceptance testing)
-
-**Gate:** Phase 6 starts only after the user confirms in writing that UAT has passed (decided 2026-11-02).
-`pz-task` must not pick a Phase 6 item while the sign-off below is unticked.
-
-- [ ] UAT environment: clean database rebuilt from migrations, start/stop script, one test login per role
-      (`TEST_USERS.md`), Mailpit open for emails, reachable from the testers' machines. — built 2026-11-03:
-      `uat.sh` (install / update / seed / reset / status / logs / stop), `docker-compose.uat.yml`, `.env.uat.example`
-      (server address, CORS, email links, Vite allowed hosts), `UAT.md` (install, ports, logins, data). Left: the user
-      installs it on the UAT server and checks testers can reach it.
-- [x] UAT data set: invented but realistic funds (umbrella + stand-alone), employers, categories and rates, fee rules,
-      regulatory figures, members with salaries and beneficiaries, principal officers linked to schemes — no real data
-      from the source documents. Re-runnable seed script. — done 2026-11-03, see `app/seed_uat.py`: dev seed + po2, 16
-      members with salaries, 4 nominations, contribution history through the real services dated from today (CTE01 paid
-      up, LSC01 last month not sent, NBL01 in arrears with a part-payment notice waiting), loading notifications cleared.
-      Checked on a fresh database: 98 schedules allocated, 200 approvals, ledger balanced per fund, arrears as intended,
-      second run adds nothing.
-- [ ] UAT scripts (`docs/uat/`): step-by-step scenarios with expected results, one per area —
-      sign-in & users (roles, lockout, password reset, fund access); fund setup & processing months; employers,
-      categories, fees, regulatory parameters; KYC onboarding & compliance review; members (create, edit, status changes,
-      beneficiaries, salary, moves, duplicates, bulk upload); receipts (PO notice → confirm → receipt, unidentified money);
-      schedules (template, upload, errors); allocation & reversal (books tie out); arrears; PDFs; principal officer portal
-      end to end; maker-checker and "can't approve own"; access limits (other fund / other employer → no access); phone
-      and desktop.
-- [x] UAT defect log (`docs/uat/defects.md`): ID, scenario, steps, expected vs actual, severity, status. — started 2026-11-03 (UAT-001).
-- [ ] UAT session(s) run with the user; every scenario marked pass / fail / not tested.
-- [ ] Fix UAT defects (each fix verified with `pz-verify` and re-tested in its scenario).
-- [ ] **UAT sign-off from the user** — only then start Phase 6.
-
 ## Phase 6 — Bonus / earnings (FR-EAR)
+
+*Next session starts here (re-planned 2026-11-03). Ask the user first: Open decisions → **Bonus calculation method***
+*(still unanswered) — the default in italics is the proposal.*
 
 - [ ] Bonus declarations per fund (period, rate, interim/final) with approval. FR-EAR-001
 - [ ] Bonus run: preview → approve → post Bonus (type 6) per member per component; idempotent batch. FR-EAR-002, 003
@@ -413,17 +387,50 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       change requests, KYC document updates. FR-PRT-002
 - [ ] Notifications to members (joined, statement ready, bank details changed). FR-NOT-003
 
-## UAT checkpoint — Phases 6–7 (user acceptance testing)
+## UAT checkpoint — Phases 0–7 (user acceptance testing)
 
-**Gate:** Phase 8 starts only after the user confirms in writing that this UAT has passed (decided 2026-11-02).
+**Gate:** Phase 8 starts only after the user confirms in writing that this UAT has passed. *Re-planned 2026-11-03:*
+the Phase 0–5 checkpoint was merged into this one so UAT can follow a member's whole story, member statements
+included; Phases 6 and 7 are built first (the user tried the portal on 2026-11-03: "looking perfect").
 
-- [ ] Refresh the UAT environment and data set (add bonus declarations, a few months of contributions, member portal logins).
-- [ ] UAT scripts (`docs/uat/`): bonus declaration → preview → approve → post, reversal and interim → final true-up
-      (known-answer figures); account and comprehensive enquiries; member benefit statement (single + bulk) and the
-      statement/trail reports; member portal end to end (self-register, OTP, balances, statements, beneficiaries,
-      contact/bank change requests); member notifications; regression of the Phase 0–5 scripts.
-- [ ] UAT session(s) run with the user; defects logged in `docs/uat/defects.md`.
-- [ ] Fix UAT defects (each verified with `pz-verify` and re-tested).
+- [ ] UAT environment: clean database rebuilt from migrations, start/stop script, one test login per role
+      (`TEST_USERS.md`), Mailpit open for emails, reachable from the testers' machines. — running 2026-11-03 on the
+      development PC (`uat-local.ps1`: own `pensionz_uat` database, web app on :5278, API :8002, Mailpit :8026; address
+      from DHCP, so re-run `start` when it changes). Also `uat.sh` + `docker-compose.uat.yml` for a Linux server.
+      Left: refresh for Phases 6–7 (member portal logins), testers confirm they can reach it.
+- [ ] UAT data — **two starting points**:
+      - [x] *Full sample* (`app/seed_uat.py`) — done 2026-11-03: dev seed + po2, 16 members with salaries, 4
+        nominations, contribution history through the real services dated from today, loading notifications cleared;
+        checked on a fresh database (98 schedules allocated, ledger balanced, arrears as intended, re-run adds nothing).
+        Extend for Phases 6–7: a declared bonus, member portal logins linked to members.
+      - [ ] *Clean start* for the end-to-end walk-through: users (one per role), reference lists, regulatory defaults
+        only — no funds, employers or members — so testers set everything up themselves (e.g. `seed_uat --clean-start`,
+        `uat-local.ps1 reset -CleanStart`).
+- [ ] UAT scripts (`docs/uat/`), in the order things happen in real life (user's order, 2026-11-03):
+      1. Administrator: users and roles, fund access; regulatory figures.
+      2. Setup: fund (bank account, trustees, processing month), investment options, fees; employer (scheme) with
+         categories and rates — maker-checker.
+      3. Administrator invites the principal officer from the employer screen → invitation email → officer sets a
+         password and signs in with the emailed code → takes over.
+      4. Officer: organisation KYC → compliance review (return, re-submit, approve).
+      5. Members: officer adds members (one by one and bulk upload) → member checker approves; staff corrections,
+         beneficiaries, salaries, moves.
+      6. **Migration of old contributions** for those members (history before go-live): staff load past months'
+         schedules and receipts (template upload per month, confirm, allocate) — books tie out, arrears clear.
+         The full PFS migration (opening balances from the legacy database) stays Phase 11.
+      7. Officer remits the current month: schedule (template, upload, row errors), payment notice + proof, emailed
+         codes → staff confirm → checker → receipt → allocation → checker; reversal and correction.
+      8. Officer views the results: dashboard, remittance history, receipts, statements / invoice / arrears PDFs,
+         requests; reminders (due date, arrears).
+      9. Bonus (Phase 6): declaration → preview → approve → post; reversal; interim → final true-up (known answers).
+      10. Member (Phase 7): portal sign-up / invite + code, balances by component, transactions, **member statements**
+          (benefit statement, trails), beneficiaries, contact/bank change requests; staff enquiries and bulk statements.
+      11. Cross-cutting: maker-checker and "can't approve own", access limits (other fund / employer / member → no
+          access), lockout and password reset, phone and desktop.
+- [x] UAT defect log (`docs/uat/defects.md`): ID, scenario, steps, expected vs actual, severity, status. — started
+      2026-11-03 (UAT-001 fixed: sign-in returned a principal officer to a leftover staff page).
+- [ ] UAT session(s) run with the user; every scenario marked pass / fail / not tested.
+- [ ] Fix UAT defects (each fix verified with `pz-verify` and re-tested in its scenario).
 - [ ] **UAT sign-off from the user** — only then start Phase 8.
 
 ## Phase 8 — Benefits & claims (FR-BEN)
@@ -528,3 +535,10 @@ Open — the default in *italics* is what we build to until answered (from REQUI
   schedules (prefilled template, upload, line checks incl. statutory minimum); allocation (hold until resolved, fees by
   payer, maker-checker) and its reversal; arrears/ageing/interest (calculated); receipt & acknowledgement PDFs. Decisions
   recorded under "Receipts & allocation rules". Follow-ups listed under Phase 4. Next: Phase 5 principal officer portal.
+- 2026-11-02/03 — **Phase 5 built and verified** (principal officer portal): access + emailed codes, dashboard,
+  organisation KYC & change of details, remittances (schedules, payment notices, proof, receipts), members & requests,
+  statements/invoice/arrears PDFs, reminders. Pushed. UAT environment on the development PC (`uat-local.ps1`,
+  `pensionz_uat`), sample data (`seed_uat`), `UAT.md`, defect log (UAT-001 fixed). **Re-planned:** UAT moved to after
+  Phase 7 (one checkpoint for Phases 0–7, scenarios in real-life order incl. migration of old contributions and member
+  statements). **Resume here:** Phase 6 — ask the bonus calculation decision, then build Phases 6 and 7, then the
+  clean-start UAT data and scripts.
