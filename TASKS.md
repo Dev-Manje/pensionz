@@ -21,6 +21,13 @@ Say "next task" or "work on [item]" — the `pz-task` skill drives the loop.
 
 ## Open decisions
 
+Open — employer onboarding by the principal officer (added 2026-11-03, ask before building):
+- [ ] **Employer onboarding by the officer** — *proposed defaults:* (a) the administrator invites an officer to one or
+      more funds; the officer can only apply into those funds; (b) the officer proposes categories and rates, scheme
+      setup may change them before approving (the officer sees the final terms); (c) two checks — compliance approves the
+      KYC, a scheme-setup checker approves the employer — and the employer goes live only when both are done;
+      (d) fees and investment options are set by staff, not the officer; (e) staff can still create employers directly.
+
 Answered:
 - [x] **Stack** — 2026-11-01: same as Money Market (FastAPI/SQLAlchemy/Alembic/Postgres,
       React/TS/Vite/MUI, Docker Compose). Ports 5178 / 8002 / 8026.
@@ -366,10 +373,25 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       cancelled by staff, allocation reversed; payment confirmed / not confirmed and credited (Phase 4) now link into the
       portal. pytest 4 new, job run on dev (2 reminders by email, second run skipped), inbox screenshot viewed.
 
+- [ ] **Principal officer onboarding by the pension administrator** (decided by the user 2026-11-03: "POs will be
+      onboarded by the Pension Admins"). Staff create the officer's portal login on its own — not only from an existing
+      employer's screen — for a fund (or several), with invitation email and emailed code at sign-in (reuse
+      `_officer_for` / `notify_invite`); maker-checker; staff list of officers with their employers and status.
+      FR-PRT-006
+- [ ] **Employer (scheme) onboarding by the principal officer** (user 2026-11-03: "PO will onboard their schemes"):
+      in the portal the officer applies to join a fund with a new employer — organisation details, contact, contribution
+      day, members' categories and rates as proposed — plus the organisation KYC (reuse the portal KYC stepper);
+      compliance reviews the KYC, scheme setup reviews the employer (checks rates against the statutory minimum and the
+      fund's rules) and approves; on approval the employer is created with the officer linked and the KYC client linked.
+      Officer follows the application's status and the reviewers' notes; one officer can apply for several employers.
+      FR-PRT-001, FR-PRT-005, FR-ONB-101. *Needs the user's answers (Open decisions → "Employer onboarding by the
+      officer") before building.*
+
 ## Phase 6 — Bonus / earnings (FR-EAR)
 
-*Next session starts here (re-planned 2026-11-03). Ask the user first: Open decisions → **Bonus calculation method***
-*(still unanswered) — the default in italics is the proposal.*
+*Next session: first the two new Phase 5 onboarding tasks above (ask Open decisions → "Employer onboarding by the
+officer"), then Phase 6 (ask Open decisions → "Bonus calculation method", still unanswered; the default in italics is
+the proposal).*
 
 - [ ] Bonus declarations per fund (period, rate, interim/final) with approval. FR-EAR-001
 - [ ] Bonus run: preview → approve → post Bonus (type 6) per member per component; idempotent batch. FR-EAR-002, 003
@@ -408,11 +430,12 @@ included; Phases 6 and 7 are built first (the user tried the portal on 2026-11-0
         `uat-local.ps1 reset -CleanStart`).
 - [ ] UAT scripts (`docs/uat/`), in the order things happen in real life (user's order, 2026-11-03):
       1. Administrator: users and roles, fund access; regulatory figures.
-      2. Setup: fund (bank account, trustees, processing month), investment options, fees; employer (scheme) with
-         categories and rates — maker-checker.
-      3. Administrator invites the principal officer from the employer screen → invitation email → officer sets a
-         password and signs in with the emailed code → takes over.
-      4. Officer: organisation KYC → compliance review (return, re-submit, approve).
+      2. Setup: fund (bank account, trustees, processing month), investment options, fees — maker-checker.
+      3. Pension administrator onboards the principal officer: portal login for the fund → invitation email → officer
+         sets a password and signs in with the emailed code.
+      4. Officer onboards the employer (scheme) in the portal: details, categories and rates, organisation KYC →
+         compliance reviews the KYC (return, re-submit, approve) → scheme setup reviews and approves the employer → the
+         officer takes over. (Also check staff can still create an employer and link an officer directly.)
       5. Members: officer adds members (one by one and bulk upload) → member checker approves; staff corrections,
          beneficiaries, salaries, moves.
       6. **Migration of old contributions** for those members (history before go-live): staff load past months'
@@ -540,5 +563,6 @@ included; Phases 6 and 7 are built first (the user tried the portal on 2026-11-0
   statements/invoice/arrears PDFs, reminders. Pushed. UAT environment on the development PC (`uat-local.ps1`,
   `pensionz_uat`), sample data (`seed_uat`), `UAT.md`, defect log (UAT-001 fixed). **Re-planned:** UAT moved to after
   Phase 7 (one checkpoint for Phases 0–7, scenarios in real-life order incl. migration of old contributions and member
-  statements). **Resume here:** Phase 6 — ask the bonus calculation decision, then build Phases 6 and 7, then the
+  statements). Added: officer onboarding by staff + employer onboarding by the officer (Phase 5). **Resume here:** ask the
+  onboarding and bonus decisions, build the two onboarding tasks, then Phases 6 and 7, then the
   clean-start UAT data and scripts.
