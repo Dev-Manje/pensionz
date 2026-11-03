@@ -3,7 +3,26 @@
 User acceptance testing of Phases 0–5. This page covers installing the UAT server, the logins, and the
 sample data testers will find. Everything in the data set is **invented**: no real people, employers or funds.
 
-## 1. Install on the UAT server
+## 1a. Run UAT on the development machine (current set-up)
+
+UAT runs on the development PC with its own database, **`pensionz_uat`**, next to the dev database. Docker Desktop
+supplies Postgres, document storage and Mailpit. The API, worker and web app run from the project folder.
+
+In PowerShell **as administrator**, in the project folder:
+
+```powershell
+.\uat-local.ps1 reset     # fresh pensionz_uat database: tables + UAT data, then starts UAT mode (3-5 min)
+.\uat-local.ps1 start     # start UAT mode again (after a restart), keeping the data
+.\uat-local.ps1 status    # what is running and the address to give testers
+.\uat-local.ps1 dev       # back to normal development (dev database, localhost only)
+```
+
+UAT mode makes the app listen on the PC's network address (found automatically; pass `-Address <ip>` to choose
+one). It adds a Windows Firewall rule for ports 5178 (app), 8002 (API), 8026 (Mailpit) and 9002 (documents).
+Testers open `http://<PC address>:5178`; `status` prints the exact URLs. The PC's address comes from DHCP. If it
+changes, run `.\uat-local.ps1 start` again and give testers the new address. Keep the PC awake while testing.
+
+## 1b. Install on a separate Linux server with Docker
 
 You need a Linux server with Docker (Engine 24+ with the Compose v2 plugin) and git. On a Windows server, run
 the same commands from Git Bash with Docker Desktop.
