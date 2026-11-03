@@ -11,10 +11,15 @@
   .\uat-local.ps1 dev              # back to normal development (dev database, localhost only)
 
   -Address 192.168.11.162          # the address testers use (default: this machine's LAN IPv4 address)
+  -WebPort 5278                    # the web app's port in UAT mode (default 5278; dev mode uses 5178)
+
+  Ports testers need: the web app (5278), the API (8002) and Mailpit (8026).
 #>
 param(
     [Parameter(Position = 0)][ValidateSet("reset", "start", "stop", "status", "dev")][string]$Command = "status",
-    [string]$Address = ""
+    [string]$Address = "",
+    # Port testers open the web app on (dev mode keeps 5178).
+    [int]$WebPort = 5278
 )
 $ErrorActionPreference = "Stop"
 $Root = $PSScriptRoot
@@ -47,8 +52,8 @@ function Get-UatDatabaseUrl { return (Get-DevDatabaseUrl) -replace '/[^/]+$', "/
 function Set-UatEnv([string]$ip) {
     $env:DATABASE_URL = Get-UatDatabaseUrl
     $env:MINIO_PUBLIC_ENDPOINT = "http://$($ip):9002"
-    $env:BACKEND_CORS_ORIGINS = "http://$($ip):5178,http://localhost:5178"
-    $env:APP_BASE_URL = "http://$($ip):5178"
+    $env:BACKEND_CORS_ORIGINS = "http://$($ip):$WebPort,http://localhost:$WebPort"
+    $env:APP_BASE_URL = "http://$($ip):$WebPort"
     $env:VITE_API_BASE_URL = "http://$($ip):8002/api/v1"
 }
 
@@ -87,30 +92,30 @@ function Wait-Port([int]$port, [string]$what) {
     throw "$what didn't start on port $port - see $Logs"
 }
 
-function Start-App([string]$bindHost) {
+function Start-App([string]$bindHost, [int]$webPort) {
     $node = (Get-Command node).Source
     Start-Hidden "api" $Py @("-m", "uvicorn", "app.main:app", "--host", $bindHost, "--port", "8002") $Backend
     Start-Hidden "worker" $Py @("-m", "app.worker") $Backend
-    Start-Hidden "web" $node @("node_modules\vite\bin\vite.js", "--host", $bindHost, "--port", "5178", "--strictPort") $Frontend
+    Start-Hidden "web" $node @("node_modules\vite\bin\vite.js", "--host", $bindHost, "--port", "$webPort", "--strictPort") $Frontend
     Wait-Port 8002 "The API"
-    Wait-Port 5178 "The web app"
+    Wait-Port $webPort "The web app"
 }
 
 function Open-Firewall {
     try {
         if (-not (Get-NetFirewallRule -DisplayName "Pensionz UAT" -ErrorAction SilentlyContinue)) {
-            New-NetFirewallRule -DisplayName "Pensionz UAT" -Direction Inbound -Protocol TCP -LocalPort 5178, 8002, 8026, 9002 -Action Allow -Profile Any | Out-Null
-            Say "Firewall: opened ports 5178, 8002, 8026, 9002"
+            New-NetFirewallRule -DisplayName "Pensionz UAT" -Direction Inbound -Protocol TCP -LocalPort $WebPort, 8002, 8026 -Action Allow -Profile Any | Out-Null
+            Say "Firewall: opened ports $WebPort, 8002, 8026"
         }
     } catch {
         Write-Warning "Couldn't add the firewall rule (needs an administrator PowerShell). Run once as administrator:"
-        Write-Warning '  New-NetFirewallRule -DisplayName "Pensionz UAT" -Direction Inbound -Protocol TCP -LocalPort 5178,8002,8026,9002 -Action Allow -Profile Any'
+        Write-Warning '  New-NetFirewallRule -DisplayName "Pensionz UAT" -Direction Inbound -Protocol TCP -LocalPort 5278,8002,8026 -Action Allow -Profile Any'
     }
 }
 
 function Show-Urls([string]$ip) {
     Write-Host ""
-    Write-Host "Testers open:  http://$($ip):5178    (logins in UAT.md)"
+    Write-Host "Testers open:  http://$($ip):$WebPort    (logins in UAT.md)"
     Write-Host "Mailpit:       http://$($ip):8026    (sign-in codes and every email the app sends)"
     Write-Host "Logs:          $Logs"
 }
@@ -137,7 +142,7 @@ switch ($Command) {
             Say "UAT data (a few minutes)"; & $Py -m app.seed_uat; if ($LASTEXITCODE -ne 0) { throw "seed failed" }
         } finally { Pop-Location }
         Say "Starting in UAT mode"
-        Start-App "0.0.0.0"; Open-Firewall; Show-Urls $ip
+        Start-App "0.0.0.0" $WebPort; Open-Firewall; Show-Urls $ip
     }
     "start" {
         $ip = Get-Address
@@ -145,13 +150,13 @@ switch ($Command) {
         Stop-App
         Set-UatEnv $ip
         Say "Starting in UAT mode on $ip"
-        Start-App "0.0.0.0"; Open-Firewall; Show-Urls $ip
+        Start-App "0.0.0.0" $WebPort; Open-Firewall; Show-Urls $ip
     }
     "stop" { Stop-App; Write-Host "Stopped the API, worker and web app (databases and Docker containers left running)." }
     "dev" {
         Stop-App; Clear-UatEnv
         Say "Starting in dev mode (dev database, localhost only)"
-        Start-App "127.0.0.1"
+        Start-App "127.0.0.1" 5178
         Write-Host "Dev: http://localhost:5178"
     }
     "status" {

@@ -18,8 +18,10 @@ In PowerShell **as administrator**, in the project folder:
 ```
 
 UAT mode makes the app listen on the PC's network address (found automatically; pass `-Address <ip>` to choose
-one). It adds a Windows Firewall rule for ports 5178 (app), 8002 (API), 8026 (Mailpit) and 9002 (documents).
-Testers open `http://<PC address>:5178`; `status` prints the exact URLs. The PC's address comes from DHCP. If it
+one). Testers need three ports: **5278** (the app; `-WebPort` changes it), **8002** (the API, which the browser
+calls) and **8026** (Mailpit, for sign-in codes). The script adds a Windows Firewall rule for them when run as
+administrator; otherwise open them yourself. Testers open `http://<PC address>:5278`; `status` prints the exact
+URLs. The PC's address comes from DHCP. If it
 changes, run `.\uat-local.ps1 start` again and give testers the new address. Keep the PC awake while testing.
 
 ## 1b. Install on a separate Linux server with Docker
@@ -66,7 +68,7 @@ After a `reset`, the history moves forward with the calendar.
 
 ## 2. Signing in
 
-- App: `http://UAT_HOST:5178`
+- App: `http://<PC address>:5278` on the development PC (`http://UAT_HOST:5178` on a Linux server)
 - Password for **every** account: **`Pensionz2026`**, unless the server's `.env` sets `SEED_PASSWORD`.
 - **Principal officers get a 6-digit code by email at every sign-in.** They also get one before sending a
   schedule or a payment notice. Codes arrive in **Mailpit** at `http://UAT_HOST:8026`; open the newest
