@@ -73,13 +73,24 @@ function Ensure-Containers {
 }
 
 function Stop-App {
-    $procs = Get-CimInstance Win32_Process | Where-Object {
-        ($_.Name -in @("python.exe", "node.exe")) -and $_.CommandLine -and
-        ($_.CommandLine -match 'pensionz') -and ($_.CommandLine -match 'uvicorn|app\.worker|vite')
+    # By command line (the web app is started with a relative vite path, so match that too) ...
+    $ids = @(Get-CimInstance Win32_Process | Where-Object {
+        ($_.Name -in @("python.exe", "node.exe")) -and $_.CommandLine -and (
+            (($_.CommandLine -match 'pensionz') -and ($_.CommandLine -match 'uvicorn|app\.worker|vite')) -or
+            ($_.CommandLine -match 'node_modules[\\/]vite[\\/]bin[\\/]vite\.js'))
+    } | ForEach-Object { $_.ProcessId })
+    # ... and whatever still listens on the app's ports.
+    foreach ($port in @(8002, 5178, $WebPort)) {
+        $ids += @(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | ForEach-Object { $_.OwningProcess })
     }
     # A child may already be gone with its parent: ignore "not found".
-    foreach ($p in $procs) { Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue }
+    foreach ($id in ($ids | Where-Object { $_ -gt 0 } | Sort-Object -Unique)) { Stop-Process -Id $id -Force -ErrorAction SilentlyContinue }
     Start-Sleep -Seconds 2
+    foreach ($port in @(8002, $WebPort)) {
+        if (Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue) {
+            throw "Something is still using port $port - close it (Task Manager) and try again"
+        }
+    }
 }
 
 function Start-Hidden([string]$name, [string]$exe, [string[]]$arguments, [string]$dir) {
