@@ -21,7 +21,9 @@ param(
     # Port testers open the web app on (dev mode keeps 5178).
     [int]$WebPort = 5278
 )
-$ErrorActionPreference = "Stop"
+# Not "Stop": Windows PowerShell 5.1 turns anything a native program writes to stderr (docker progress,
+# alembic's log lines, taskkill notes) into a terminating error. Native calls check $LASTEXITCODE instead.
+$ErrorActionPreference = "Continue"
 $Root = $PSScriptRoot
 $Backend = Join-Path $Root "backend"
 $Frontend = Join-Path $Root "frontend"
@@ -75,7 +77,8 @@ function Stop-App {
         ($_.Name -in @("python.exe", "node.exe")) -and $_.CommandLine -and
         ($_.CommandLine -match 'pensionz') -and ($_.CommandLine -match 'uvicorn|app\.worker|vite')
     }
-    foreach ($p in $procs) { & taskkill /PID $p.ProcessId /T /F 2>$null | Out-Null }
+    # A child may already be gone with its parent: ignore "not found".
+    foreach ($p in $procs) { Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue }
     Start-Sleep -Seconds 2
 }
 
