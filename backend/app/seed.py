@@ -9,6 +9,7 @@
     python -m app.seed      (from backend/)
 
 Logins are listed in TEST_USERS.md."""
+import os
 from datetime import date
 from decimal import Decimal
 
@@ -27,7 +28,8 @@ from app.models.regulatory import RegulatoryParameterVersion, TaxBand, TaxTable,
 from app.models.scheme import Scheme, SchemeOfficer
 from app.services import fund_access, identity
 
-DEV_PASSWORD = "Pensionz2026"
+# Every seeded login gets this password; set SEED_PASSWORD to choose another (e.g. on a UAT server).
+DEV_PASSWORD = os.environ.get("SEED_PASSWORD") or "Pensionz2026"
 
 USERS: list[tuple[str, str, list[UserRole]]] = [
     ("admin@pensionz.dev", "Ada Admin", [UserRole.admin]),
@@ -275,8 +277,8 @@ def seed_regulatory(db) -> None:
         db.add(table)
 
 
-# PPF01 is left without a processing month, to show that state.
-OPEN_MONTH = date(2026, 11, 1)
+# PPF01 is left without a processing month, to show that state. The open month is the current one.
+OPEN_MONTH = date.today().replace(day=1)
 
 
 def seed_periods(db) -> None:

@@ -1,5 +1,8 @@
 # Test users (dev only)
 
+For the UAT server (install, logins, sample data) see **UAT.md**; `python -m app.seed_uat` adds the UAT data set
+including po2@pensionz.dev.
+
 Created by `docker compose exec backend python -m app.seed`. Password for every account:
 **`Pensionz2026`**. Sign in at http://localhost:5178. Emails the app sends land in Mailpit:
 http://localhost:8026.

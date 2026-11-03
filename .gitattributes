@@ -5,3 +5,5 @@
 *.png binary
 *.xlsx binary
 *.bat text eol=crlf
+# Shell scripts run on Linux servers: always LF, whatever the checkout platform.
+*.sh text eol=lf

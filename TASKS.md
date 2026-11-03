@@ -372,10 +372,17 @@ Open — the default in *italics* is what we build to until answered (from REQUI
 `pz-task` must not pick a Phase 6 item while the sign-off below is unticked.
 
 - [ ] UAT environment: clean database rebuilt from migrations, start/stop script, one test login per role
-      (`TEST_USERS.md`), Mailpit open for emails, reachable from the testers' machines.
-- [ ] UAT data set: invented but realistic funds (umbrella + stand-alone), employers, categories and rates, fee rules,
+      (`TEST_USERS.md`), Mailpit open for emails, reachable from the testers' machines. — built 2026-11-03:
+      `uat.sh` (install / update / seed / reset / status / logs / stop), `docker-compose.uat.yml`, `.env.uat.example`
+      (server address, CORS, email links, Vite allowed hosts), `UAT.md` (install, ports, logins, data). Left: the user
+      installs it on the UAT server and checks testers can reach it.
+- [x] UAT data set: invented but realistic funds (umbrella + stand-alone), employers, categories and rates, fee rules,
       regulatory figures, members with salaries and beneficiaries, principal officers linked to schemes — no real data
-      from the source documents. Re-runnable seed script.
+      from the source documents. Re-runnable seed script. — done 2026-11-03, see `app/seed_uat.py`: dev seed + po2, 16
+      members with salaries, 4 nominations, contribution history through the real services dated from today (CTE01 paid
+      up, LSC01 last month not sent, NBL01 in arrears with a part-payment notice waiting), loading notifications cleared.
+      Checked on a fresh database: 98 schedules allocated, 200 approvals, ledger balanced per fund, arrears as intended,
+      second run adds nothing.
 - [ ] UAT scripts (`docs/uat/`): step-by-step scenarios with expected results, one per area —
       sign-in & users (roles, lockout, password reset, fund access); fund setup & processing months; employers,
       categories, fees, regulatory parameters; KYC onboarding & compliance review; members (create, edit, status changes,

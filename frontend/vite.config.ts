@@ -7,6 +7,10 @@ export default defineConfig({
   server: {
     host: true,
     port: 5178,
+    // Vite only answers requests for localhost / IP addresses unless the host name is
+    // listed: on a server reached by name (UAT) set VITE_ALLOWED_HOSTS=uat.example.org
+    // (comma-separated) in .env.
+    allowedHosts: process.env.VITE_ALLOWED_HOSTS ? process.env.VITE_ALLOWED_HOSTS.split(",").map((h) => h.trim()) : [],
     // Docker Desktop's bind mount on Windows doesn't reliably forward native
     // filesystem change events into the container, so Vite's default
     // watcher never notices edits and keeps serving stale transforms.

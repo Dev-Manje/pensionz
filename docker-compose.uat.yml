@@ -1,0 +1,18 @@
+# UAT server overrides — use with the base file:
+#   docker compose -f docker-compose.yml -f docker-compose.uat.yml up -d --build
+# (uat.sh does this for you). Same services as development; the API runs without
+# auto-reload and every service restarts with the server.
+services:
+  db:
+    restart: always
+  minio:
+    restart: always
+  mailpit:
+    restart: always
+  backend:
+    restart: always
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+  worker:
+    restart: always
+  frontend:
+    restart: always
