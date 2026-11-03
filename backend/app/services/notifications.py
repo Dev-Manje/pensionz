@@ -153,3 +153,35 @@ def notify_kyc_expiring_digest(db: Session, staff: list[User], lines: list[str])
 def notify_kyc_document_expiring(db: Session, user: User, label: str, when: str) -> None:
     _notify(db, user, "kyc.document_expiring", "Please update your document",
             f"Your {label} expires {when}. Upload a current one so your records stay up to date.")
+
+
+# --- employers (principal officers) — FR-NOT-003 ------------------------------
+
+
+def notify_officers(db: Session, officers: list[User], event: str, title: str, body: str, *, link: str | None,
+                    entity_type: str | None = None, entity_id: object | None = None) -> None:
+    for officer in officers:
+        _notify(db, officer, event, title, body, link=link, entity_type=entity_type, entity_id=entity_id)
+
+
+def notify_schedule_due(db: Session, officers: list[User], scheme_name: str, month_label: str, due: str, missing: str,
+                        scheme_id: uuid.UUID) -> None:
+    notify_officers(db, officers, "employer.schedule_due", f"{scheme_name}: {month_label} contributions due {due}",
+                    f"{month_label} contributions are due {due}. Still to do: {missing}.",
+                    link=f"/po/schemes/{scheme_id}", entity_type="scheme", entity_id=scheme_id)
+
+
+def notify_arrears(db: Session, officers: list[User], scheme_name: str, total: str, months: str, interest: str | None,
+                   scheme_id: uuid.UUID) -> None:
+    notify_officers(db, officers, "employer.arrears", f"{scheme_name}: contributions overdue {total}",
+                    f"{scheme_name} owes {total} in contributions ({months})." +
+                    (f" Late-payment interest so far: {interest}." if interest else "") +
+                    " Please send the schedules and pay, or contact us if this is wrong.",
+                    link=f"/po/schemes/{scheme_id}?tab=statements", entity_type="scheme", entity_id=scheme_id)
+
+
+def notify_arrears_escalation(db: Session, staff: list[User], scheme_label: str, total: str, oldest: str, fund_id: uuid.UUID) -> None:
+    for user in staff:
+        _notify(db, user, "employer.arrears_escalated", f"Arrears: {scheme_label}",
+                f"{scheme_label} owes {total}; the oldest unpaid month is {oldest}. The employer has been reminded.",
+                link=f"/contributions?fund={fund_id}&tab=arrears", email=False)

@@ -29,6 +29,14 @@ class Settings(BaseSettings):
     otp_max_attempts: int = 5
     otp_max_sends_per_15_minutes: int = 5
 
+    # Employer reminders (FR-NOT-003, FR-CON-008), daily job employer_reminders:
+    # days before the due date to remind officers whose schedule isn't sent; days
+    # overdue at which an arrears reminder goes out; from this many days overdue the
+    # contributions officers are told too (escalation).
+    employer_due_reminder_days: tuple[int, ...] = (7, 0)
+    arrears_reminder_days: tuple[int, ...] = (1, 30, 60, 90)
+    arrears_escalation_days: int = 60
+
     # Product branding for emails and messages (mirror of frontend/src/brand.ts).
     brand_name: str = "Pensionz"
     brand_color: str = "#0b5c6b"

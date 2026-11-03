@@ -293,7 +293,7 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       1–30…over 150 days, interest at `late_payment_interest_pct` in force on the due date (calculated, not posted).
       pytest 6 new (known answers), dev UMB01 figures checked, screenshots 1440 + 390 viewed.
 - [ ] Contributions follow-ups (found while building Phase 4): post late-payment interest (Dr 1200 / Cr 4300) once
-      finance confirms the recipe; arrears reminders/escalation to POs (Phase 5 notifications); Registrar report of
+      finance confirms the recipe; arrears reminders/escalation to POs (done in Phase 5); Registrar report of
       non-compliant employers (Phase 10 reports); trace employer transfers in expected contributions
       (`member_assignment`); configurable per-employer mismatch rules (refund / carry forward / bill) beyond "hold";
       DB-fund contribution posting.
@@ -357,7 +357,14 @@ Open — the default in *italics* is what we build to until answered (from REQUI
       out; "not a tax invoice"), arrears statement (overdue months, ageing, interest if a rate is set; months not due yet as
       a note). Downloads audit-logged. pytest 4 new (figures read from the PDFs), live PDFs for CTE01 read and checked,
       screenshots 1440/390 viewed. Follow-up: staff copies of the same documents on the employer screen.
-- [ ] Notifications to POs: schedule due, received/rejected, arrears. FR-NOT-003
+- [x] Notifications to POs: schedule due, received/rejected, arrears. FR-NOT-003 — done 2026-11-03, see
+      `jobs/employer_reminders.py` (daily 07:30), `notifications.notify_schedule_due / notify_arrears /
+      notify_arrears_escalation / notify_officers`: schedule-due reminder 7 days before and on the due date while last
+      month's schedule isn't sent (says what's missing); arrears reminder when a month is 1/30/60/90 days overdue (total,
+      months, interest), escalated to contributions officers from 60 days (settings `employer_due_reminder_days`,
+      `arrears_reminder_days`, `arrears_escalation_days`); schedule received (all the employer's officers), sent back /
+      cancelled by staff, allocation reversed; payment confirmed / not confirmed and credited (Phase 4) now link into the
+      portal. pytest 4 new, job run on dev (2 reminders by email, second run skipped), inbox screenshot viewed.
 
 ## UAT checkpoint — Phases 0–5 (user acceptance testing)
 

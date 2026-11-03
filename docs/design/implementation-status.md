@@ -547,3 +547,15 @@ officers by `GET /po/schemes/{id}/statements/...` (audited `statement_downloaded
   of the amount due — no VAT; not a tax invoice.
 - `arrears`: `arrears.scheme_arrears` — overdue months only in the table (total = `total_arrears`), months not due yet as
   notes, ageing of the overdue amount, interest when `late_payment_interest_pct` is set.
+
+### Employer notifications (FR-NOT-003, FR-CON-008) — 2026-11-03
+
+- Job `employer_reminders` (07:30 business time, no catch-up; one run per date via `job_run`), active employers with
+  officers: **schedule due** when `portal.current_remittance` is `days_to_due` ∈ `employer_due_reminder_days` (7, 0) and
+  the stage is not_started / payment_only / draft; **arrears** when any overdue month's `days_overdue` ∈
+  `arrears_reminder_days` (1, 30, 60, 90) — one message per employer with the total; from `arrears_escalation_days` (60)
+  also a bell (no email) to contributions officers with access to the fund. Day counts are exact, so reminders don't
+  repeat on later days.
+- Event notices to the employer's officers (bell + email): schedule received (when an officer sends one), schedule sent
+  back (staff re-open a portal schedule — the officers can edit it again) or cancelled by staff, allocation reversed;
+  "contributions credited" now links to `/po/schedules/<id>`.

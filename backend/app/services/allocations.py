@@ -289,7 +289,7 @@ def _apply(db: Session, request: ApprovalRequest, checker: User) -> None:
     for officer in scheme.officers:
         notifications._notify(db, officer.user, "contributions.allocated", f"{month_label} contributions allocated",
                                f"Schedule {schedule.reference} ({_fmt(schedule.total)}) has been credited to {schedule.line_count} members.",
-                               link=f"/po/remittances", entity_type="contribution_schedule", entity_id=schedule.id)
+                               link=f"/po/schedules/{schedule.id}", entity_type="contribution_schedule", entity_id=schedule.id)
 
 
 def _on_reject(db: Session, request: ApprovalRequest, user: User) -> None:
@@ -364,6 +364,13 @@ def _apply_reversal(db: Session, request: ApprovalRequest, checker: User) -> Non
     schedule.status = ScheduleStatus.ready
     audit.record(db, checker.id, "contribution_allocation", allocation.id, "reversed",
                  after={"journal": ledger.entry_ref(reversal), "reason": request.payload["reason"]}, fund_id=allocation.fund_id)
+    scheme = db.get(Scheme, schedule.scheme_id)
+    notifications.notify_officers(
+        db, [o.user for o in scheme.officers], "contributions.reversed",
+        f"{periods.label(schedule.contribution_month)} contributions taken back for correction",
+        f"The credit of schedule {schedule.reference} to members has been reversed: {request.payload['reason']} "
+        "Your pension administrator will contact you about correcting the schedule.",
+        link=f"/po/schedules/{schedule.id}", entity_type="contribution_schedule", entity_id=schedule.id)
 
 
 approvals.register(approvals.ApprovalKind(

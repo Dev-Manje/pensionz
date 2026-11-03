@@ -101,6 +101,13 @@ def submit(db: Session, user: User, schedule: ContributionSchedule, code: str) -
                               f"{scheme.name} sent its {periods.label(schedule.contribution_month)} schedule: {schedule.line_count} members, "
                               f"{receipts.money_label(schedule.total)}.", link=f"/contributions/schedules/{schedule.id}",
                               entity_type="contribution_schedule", entity_id=schedule.id, email=False)
+    others = [o.user for o in scheme.officers if o.user_id != user.id]
+    notifications.notify_officers(
+        db, [user, *others], "schedule.received", f"Schedule {schedule.reference} received",
+        f"We have received the {periods.label(schedule.contribution_month)} schedule for {scheme.name} "
+        f"({schedule.line_count} members, {receipts.money_label(schedule.total)}), sent by {user.full_name}. "
+        "Members are credited once it is matched to your payment.",
+        link=f"/po/schedules/{schedule.id}", entity_type="contribution_schedule", entity_id=schedule.id)
     return schedules.submit(db, user, schedule)
 
 

@@ -404,6 +404,8 @@ def reopen(db: Session, user: User, schedule: ContributionSchedule) -> Contribut
     _no_pending_allocation(db, schedule)
     schedule.status, schedule.submitted_by_user_id, schedule.submitted_at = ScheduleStatus.draft, None, None
     audit.record(db, user.id, "contribution_schedule", schedule.id, "reopened", fund_id=schedule.fund_id)
+    _tell_officers(db, schedule, "schedule.reopened", f"Schedule {schedule.reference} sent back for changes",
+                   "Your pension administrator has sent it back so it can be corrected — check each row and send it again.")
     db.commit()
     db.refresh(schedule)
     return schedule
@@ -413,8 +415,25 @@ def cancel(db: Session, user: User, schedule: ContributionSchedule) -> Contribut
     if schedule.status not in (ScheduleStatus.draft, ScheduleStatus.ready):
         raise HTTPException(status.HTTP_409_CONFLICT, "An allocated schedule can't be cancelled — reverse the allocation instead")
     _no_pending_allocation(db, schedule)
+    was_sent = schedule.status == ScheduleStatus.ready
     schedule.status = ScheduleStatus.cancelled
     audit.record(db, user.id, "contribution_schedule", schedule.id, "cancelled", fund_id=schedule.fund_id)
+    if was_sent or user.has_any_role(*MAKERS):
+        _tell_officers(db, schedule, "schedule.cancelled", f"Schedule {schedule.reference} cancelled",
+                       "Your pension administrator has cancelled it. If the month still needs a schedule, send a new one.",
+                       skip=user)
     db.commit()
     db.refresh(schedule)
     return schedule
+
+
+def _tell_officers(db: Session, schedule: ContributionSchedule, event: str, title: str, body: str, *, skip: User | None = None) -> None:
+    """Officers of a portal schedule's employer hear about staff changes to it."""
+    from app.services import notifications
+
+    if schedule.source != ScheduleSource.portal:
+        return
+    scheme = db.get(Scheme, schedule.scheme_id)
+    officers = [o.user for o in scheme.officers if skip is None or o.user_id != skip.id]
+    notifications.notify_officers(db, officers, event, title, f"{periods.label(schedule.contribution_month)}: {body}",
+                                  link=f"/po/schedules/{schedule.id}", entity_type="contribution_schedule", entity_id=schedule.id)
