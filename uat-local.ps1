@@ -107,7 +107,7 @@ function Start-App([string]$bindHost, [int]$webPort) {
 function Open-Firewall {
     try {
         if (-not (Get-NetFirewallRule -DisplayName "Pensionz UAT" -ErrorAction SilentlyContinue)) {
-            New-NetFirewallRule -DisplayName "Pensionz UAT" -Direction Inbound -Protocol TCP -LocalPort $WebPort, 8002, 8026 -Action Allow -Profile Any | Out-Null
+            New-NetFirewallRule -DisplayName "Pensionz UAT" -Direction Inbound -Protocol TCP -LocalPort $WebPort, 8002, 8026 -Action Allow -Profile Any -ErrorAction Stop | Out-Null
             Say "Firewall: opened ports $WebPort, 8002, 8026"
         }
     } catch {
