@@ -425,15 +425,37 @@ Open — the default in *italics* is what we build to until answered (from REQUI
 
 ## Phase 7 — Enquiries, statements & member portal (FR-ENQ, FR-PRT-002)
 
-- [ ] Account enquiry (main info, current-period transactions, history, statement, transaction trail,
-      contributions, voluntary contributions; balance + status). FR-ENQ-001
-- [ ] Comprehensive enquiry screen. FR-ENQ-002
-- [ ] Member Benefit Statement PDF (single + bulk, legacy layout in `docs/legacy/PFS-analysis.md`). FR-ENQ-003
-- [ ] Client Statement (aged analysis), Transaction Trail, Contributions Trail, Voluntary Contributions Trail. FR-ENQ-008
-- [ ] Member portal access: invite or self-register (member no. + ID + DOB + OTP). FR-PRT-006
-- [ ] Member portal: balances by component, transactions, statements, beneficiaries, contact/bank
-      change requests, KYC document updates. FR-PRT-002
-- [ ] Notifications to members (joined, statement ready, bank details changed). FR-NOT-003
+Verified 2026-11-04: pytest 295/295, vitest 38/38, tsc clean, live API smoke 53/53 (scratchpad `smoke7.py`: staff, auditor,
+member checker and a self-registered member; negatives below), 26 screenshots at 1440 + 390 viewed (no JS errors), PDFs viewed.
+
+- [x] Account enquiry (main info, current-period transactions, history, statement, transaction trail,
+      contributions, voluntary contributions; balance + status). FR-ENQ-001 — done 2026-11-04, see `api/v1/enquiries.py`,
+      `routes/staff/enquiries/EnquiryPage.tsx`: balance = EE + ER by line from the sub-ledger, aged arrears, date range
+      (start after end → 400, max ten years), any staff role reads (fund-scoped).
+- [x] Comprehensive enquiry screen. FR-ENQ-002 — done 2026-11-04: member, employer & KYC, balances, beneficiaries, last 12
+      months, link to the member record (claims come with Phase 8).
+- [x] Member Benefit Statement PDF (single + bulk, legacy layout in `docs/legacy/PFS-analysis.md`). FR-ENQ-003 — done
+      2026-11-04, see `services/io/member_documents.py`: as-at date, one page per current member in bulk (fund or one
+      employer, ≤ 2,000), "Tell members it's ready" (member admin / admin; future date → 400, auditor → 403).
+- [x] Client Statement (aged analysis), Transaction Trail, Contributions Trail, Voluntary Contributions Trail. FR-ENQ-008 —
+      done 2026-11-04: closing = last running balance; PDF tables tightened (amounts and references no longer wrap; shared
+      grid padding 3pt also used by employer statements).
+- [x] Member portal access: invite or self-register (member no. + ID + DOB + OTP). FR-PRT-006 — done 2026-11-04,
+      `services/member_portal.py`, `/register`: invite needs an email on record (400), second invite 409; registration gives
+      the same answer whether or not the details match, code to the email on record, wrong code / dead challenge 400; code at
+      every later sign-in. An email that already has a non-member login → 409 (invite) / silent no-op (register).
+- [x] Member portal: balances by component, transactions, statements, beneficiaries, contact/bank
+      change requests, KYC document updates. FR-PRT-002 — done 2026-11-04, `routes/member/MemberPortal.tsx`: ID and bank
+      account masked, another member's id → 404, staff endpoints → 403 for members and vice versa; contact and bank changes
+      go to the member checker (bank change needs an emailed code); KYC update starts / continues an individual application.
+- [x] Notifications to members (joined, statement ready, bank details changed). FR-NOT-003 — done 2026-11-04: pytest for
+      all three; "bank details changed" and "statement ready" delivered to Mailpit in the live smoke.
+- [x] **Personal pension holders in the member portal** — fixed 2026-11-04: the web app sent the `individual` role to
+      `/member` but the API answered 403; `/my/*` now accepts `member` or `individual` (pytest added; individual@pensionz.dev
+      sees "not linked to a membership yet", screenshot viewed).
+- [ ] **Invite / register a personal-pension holder who already has an `individual` login** — `member_portal._login_for`
+      only accepts logins with the member role, so this answers 409 (invite) or does nothing (register). Accept the
+      `individual` role there too, or add the member role. Check with Phase 8 personal-pension onboarding.
 
 ## UAT checkpoint — Phases 0–7 (user acceptance testing)
 
@@ -602,3 +624,8 @@ included; Phases 6 and 7 are built first (the user tried the portal on 2026-11-0
   (`--port 8012` without `--reload`; set `MSYS_NO_PATHCONV=1` for the screenshot script), screenshots of Enquiries, bulk
   statements, member portal tabs and /register at 1440 + 390, then tick the Phase 7 items, commit, push; then UAT prep
   (clean-start seed, UAT data refresh, Word UAT scripts in user-story format with result columns).
+- 2026-11-04 — **Phase 7 verified and ticked**: full pytest 295/295, vitest 38/38, tsc clean, live smoke 53/53, screenshots
+  of Enquiries (search, bulk, main, statement, contributions, comprehensive), member portal (all tabs) and /register at
+  1440 + 390, PDFs viewed. Fixed while verifying: statement PDF columns (amounts/references wrapped), "Phase 8" wording on the
+  comprehensive screen. Also fixed: personal-pension holders (`individual` role) got 403 in the member portal. Open: inviting an existing `individual` login. **Next:** UAT prep
+  (clean-start seed, UAT data refresh with member portal logins and a declared bonus, Word UAT scripts).

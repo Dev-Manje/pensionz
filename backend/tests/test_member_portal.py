@@ -100,6 +100,15 @@ def test_only_own_memberships(client, db, admin, member, fund):
         assert client.get(f"{API}/my/members/{member.id}/documents/{kind}", headers=auth_headers(user)).content[:4] == b"%PDF"
 
 
+def test_personal_pension_holder_uses_the_member_portal(client, db, member):
+    holder = make_user(db, UserRole.individual)
+    assert client.get(f"{API}/my/members", headers=auth_headers(holder)).json() == []
+    assert client.get(f"{API}/my/members/{member.id}", headers=auth_headers(holder)).status_code == 404
+    member.portal_user_id = holder.id
+    db.flush()
+    assert [m["member_id"] for m in client.get(f"{API}/my/members", headers=auth_headers(holder)).json()] == [str(member.id)]
+
+
 def test_contact_and_bank_changes_go_to_the_checker(client, db, admin, checker, member):
     client.post(f"{API}/members/{member.id}/portal-invite", headers=auth_headers(admin))
     db.refresh(member)

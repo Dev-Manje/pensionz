@@ -28,7 +28,8 @@ from app.schemas.member import NominationIn
 from app.services import ledger, member_portal as svc, member_records as records, members
 
 router = APIRouter(tags=["member portal"])
-member_only = require_roles(UserRole.member)
+# Personal-pension holders (individual role) see their own memberships the same way.
+member_only = require_roles(UserRole.member, UserRole.individual)
 REGISTER_CHALLENGE = "member_register"
 
 

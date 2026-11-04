@@ -588,3 +588,33 @@ death date in the period, or an interim run's as-at date. Amount = round(opening
 credited, posted as type 6 (positive) or 5 (negative) through `ledger.post_member_transactions` (GL from Setup → transaction
 types: 6 = Dr 2600 / Cr 2000). Approval kinds: `bonus_declaration`, `bonus_run` (re-checks the preview), `bonus_reversal`
 (per-line paired type, whole run or chosen members). Roles: finance makes, finance checker approves.
+
+## Phase 7 — Enquiries, statements & member portal (FR-ENQ, FR-PRT-002, FR-PRT-006, FR-NOT-003) — 2026-11-04
+
+**Member statements** (`services/member_statements.py`, PDFs in `services/io/member_documents.py`): all from the member
+sub-ledger (`member_transaction`). Benefit statement as at a date (employee lines, employer lines, total; legacy layout);
+client statement over a range (opening, running balance, closing) with the aged analysis of the employer's unpaid
+contributions for the member (`arrears.member_arrears`, buckets Not yet due … Over 150 days); transaction trail with totals
+per account; contributions / voluntary contributions trail per month (earnings shown in the month that ends the bonus period).
+Ranges default to the last 12 months (not before the join date); max ten years. Every download is audited
+(`statement_downloaded`). The shared PDF grid (`employer_statements._grid`) uses 3pt cell padding.
+
+**Staff Enquiries** (`api/v1/enquiries.py`, `routes/staff/enquiries/`): any staff role, fund-scoped through `get_member`.
+Tabs: main information, current period, transaction history, statement, transaction trail, contributions, voluntary,
+comprehensive. Bulk benefit statements per fund or employer (current members only, ≤ 2,000) and "tell members it's ready"
+(member admin / admin; email + portal bell for members with an email or login).
+
+**Member portal access** (`services/member_portal.py`): staff invite (member admin / admin) needs an email on the record and
+creates or links a member-role login (`member.portal_user_id`, migration `c8e2f4a61d07`). Self-registration at `/register`:
+member number (or old member number) + ID number (normalised) + date of birth must match exactly one non-deceased member with
+an email; the reply is the same either way; the 6-digit code goes to the email on record; finishing sets the password. Portal
+users enter an emailed code at every sign-in.
+
+**Member portal** (`api/v1/member_portal.py`, `routes/member/MemberPortal.tsx`): roles `member` or `individual`; only
+memberships linked to the login (else 404). Savings by account, transactions (paged), statements (same PDFs), beneficiaries
+(new nomination → member checker), contact changes and bank changes (bank needs an emailed code) as `member_update` requests
+marked `_portal`, request list, KYC update (change of the approved individual KYC, or a first application). ID and bank
+account masked.
+
+**Notifications to members**: `member.joined` on approval of a new member, `member.bank_changed` (old and new email),
+`member.statement_ready`.

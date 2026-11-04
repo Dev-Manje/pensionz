@@ -266,7 +266,7 @@ function Comprehensive({ id, s }: { id: string; s: MemberSummaryStatement }) {
         {statement.data?.lines.length === 0 && <Typography variant="body2" color="text.secondary">No transactions.</Typography>}
       </Paper>
       <DetailSection title="Claims, documents and notes">
-        <DetailField label="Claims">None — claims are handled from Phase 8.</DetailField>
+        <DetailField label="Claims">None</DetailField>
         <DetailField label="Documents">{m?.kyc.application_reference ? `KYC documents in ${m.kyc.application_reference}` : "None"}</DetailField>
         <DetailField label="Member record">
           <Link component={RouterLink} to={`/members/${id}`}>Open the member record</Link>

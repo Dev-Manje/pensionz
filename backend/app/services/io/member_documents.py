@@ -95,11 +95,11 @@ def client_statement_pdf(db: Session, member: Member, start: date, end: date, pr
     story = _head(db, member, "Client Statement", f"{start:%d %B %Y} to {end:%d %B %Y} · statement date {printed:%d %B %Y}")
     address = member.postal_address or member.physical_address
     story += [_details(db, member, [("Address", address)] if address else None), Spacer(1, 8)]
-    rows = [[f"{start:%d %b %Y}", "Balance brought forward", "", "", "", "", _amt(s.opening)]]
-    rows += [[f"{l.transaction_date:%d %b %Y}", l.description, l.reference or "", l.transaction, _amt(l.debit) if l.debit else "",
+    rows = [[f"{start:%d/%m/%Y}", "Balance brought forward", "", "", "", "", _amt(s.opening)]]
+    rows += [[f"{l.transaction_date:%d/%m/%Y}", l.description, l.reference or "", l.transaction, _amt(l.debit) if l.debit else "",
               _amt(l.credit) if l.credit else "", _amt(l.balance)] for l in s.lines]
     story.append(_grid(["Date", "Description", "Reference", "Transaction", "Debit", "Credit", "Balance"], rows,
-                       [0.11, 0.29, 0.13, 0.15, 0.1, 0.1, 0.12], {4, 5, 6}, ["", "Current balance", "", "", "", "", _amt(s.closing)]))
+                       [0.12, 0.23, 0.14, 0.13, 0.126, 0.126, 0.128], {4, 5, 6}, ["", "Current balance", "", "", "", "", _amt(s.closing)]))
     story += [Paragraph("Aged analysis — contributions still owed by the employer", SECTION),
               _grid([label for label, _ in s.ageing], [[_amt(v) for _, v in s.ageing]], [1 / len(s.ageing)] * len(s.ageing), set(range(len(s.ageing))))]
     story += [Spacer(1, 10), Paragraph("Please do not hesitate to contact us if you have any queries.", BODY)]
@@ -111,11 +111,11 @@ def transaction_trail_pdf(db: Session, member: Member, start: date, end: date, p
     t = ms.transaction_trail(db, member, start, end)
     fund = db.get(Fund, member.fund_id)
     story = _head(db, member, "Transaction Trail", f"{start:%d %B %Y} to {end:%d %B %Y}") + [_details(db, member), Spacer(1, 8)]
-    rows = [[f"{l.transaction_date:%d %b %Y}", l.transaction, l.reference or "", l.description, COMPONENT_NAMES[l.component.value],
+    rows = [[f"{l.transaction_date:%d/%m/%Y}", l.transaction, l.reference or "", l.description, COMPONENT_NAMES[l.component.value],
              _amt(l.debit) if l.debit else "", _amt(l.credit) if l.credit else ""] for l in t.lines]
     debit, credit = sum((v[0] for v in t.totals.values()), Decimal("0")), sum((v[1] for v in t.totals.values()), Decimal("0"))
     story.append(_grid(["Date", "Type", "Reference", "Description", "Account", "Debit", "Credit"], rows,
-                       [0.11, 0.17, 0.13, 0.27, 0.12, 0.1, 0.1], {5, 6}, ["", "", "", "Total", "", _amt(debit), _amt(credit)]))
+                       [0.12, 0.15, 0.14, 0.20, 0.11, 0.14, 0.14], {5, 6}, ["", "", "", "Total", "", _amt(debit), _amt(credit)]))
     story += [Paragraph("Totals per account", SECTION),
               _grid(["Account", "Debit", "Credit", "Net"], [[COMPONENT_NAMES[c.value], _amt(d), _amt(cr), _amt(cr - d)] for c, (d, cr) in t.totals.items()],
                     [0.4, 0.2, 0.2, 0.2], {1, 2, 3})]
@@ -139,7 +139,7 @@ def contributions_trail_pdf(db: Session, member: Member, start: date, end: date,
                  f"{m.earning_rate.normalize():f}%" if m.earning_rate is not None and m.earning else "", _amt(m.total)] for m in months]
         tot = lambda f: _amt(sum((f(m) for m in months), Decimal("0")))  # noqa: E731
         story.append(_grid(["Period", "Employee contribution", "Company contribution", "Emp. earning", "Comp. earning", "Earning",
-                            "Earning rate", "Total"], rows, [0.1, 0.14, 0.14, 0.12, 0.12, 0.12, 0.11, 0.15], {1, 2, 3, 4, 5, 6, 7},
+                            "Earning rate", "Total"], rows, [0.12, 0.13, 0.13, 0.11, 0.11, 0.11, 0.11, 0.18], {1, 2, 3, 4, 5, 6, 7},
                            ["Total", tot(lambda m: m.employee), tot(lambda m: m.company), tot(lambda m: m.employee_earning),
                             tot(lambda m: m.company_earning), tot(lambda m: m.earning), "", tot(lambda m: m.total)]))
     story += [Spacer(1, 6), Paragraph("Earnings are shown in the month that ends the bonus period they were declared for.", SMALL)]

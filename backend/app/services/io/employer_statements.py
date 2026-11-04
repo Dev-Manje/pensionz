@@ -65,7 +65,8 @@ def _grid(header: list[str], rows: list[list[str]], widths: list[float], right: 
     table = Table(data, colWidths=[WIDTH * w for w in widths], repeatRows=1)
     style = [("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(settings.brand_color)), ("VALIGN", (0, 0), (-1, -1), "TOP"),
              ("LINEBELOW", (0, 1), (-1, -1), 0.25, colors.HexColor("#d5dadd")), ("TOPPADDING", (0, 0), (-1, -1), 3),
-             ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]
+             ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+             ("LEFTPADDING", (0, 0), (-1, -1), 3), ("RIGHTPADDING", (0, 0), (-1, -1), 3)]
     if total:
         style.append(("LINEABOVE", (0, -1), (-1, -1), 0.8, colors.black))
     table.setStyle(TableStyle(style))
